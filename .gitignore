@@ -1,3 +1,16 @@
-best_model.pth
+# Python environment
+.venv/
+venv/
 __pycache__/
-test_imgs/
+*.pyc
+
+# SQLite database
+backend/*.db
+backend/*.db-wal
+backend/*.db-shm
+
+# Uploaded images
+uploads/
+
+# Local configuration
+.env
