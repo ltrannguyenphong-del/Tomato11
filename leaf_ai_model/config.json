@@ -1,0 +1,1 @@
+{"img_size": 256, "mean": [0.485, 0.456, 0.406], "std": [0.229, 0.224, 0.225], "model": "efficientnet_b2", "not_tomato_index": 10}

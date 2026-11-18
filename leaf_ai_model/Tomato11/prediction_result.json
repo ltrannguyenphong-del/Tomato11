@@ -1,0 +1,12 @@
+{
+    "image": "anhnt1.png",
+    "status": "ACCEPTED",
+    "prediction": "Not_tomato",
+    "raw_prediction": "Not_tomato",
+    "confidence": 0.9148,
+    "second_class": "Tomato_Early_blight",
+    "second_confidence": 0.0106,
+    "margin": 0.9042,
+    "message": "Dự đoán đủ độ tin cậy.",
+    "rejection_reasons": []
+}

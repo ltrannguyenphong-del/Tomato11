@@ -1,0 +1,33 @@
+{
+    "img_size": 256,
+    "mean": [
+        0.485,
+        0.456,
+        0.406
+    ],
+    "std": [
+        0.229,
+        0.224,
+        0.225
+    ],
+    "model": "efficientnet_b2",
+    "num_classes": 11,
+    "not_tomato_index": 10,
+    "classes": [
+        "Tomato_Bacterial_spot",
+        "Tomato_Early_blight",
+        "Tomato_Late_blight",
+        "Tomato_Leaf_Mold",
+        "Tomato_Septoria_leaf_spot",
+        "Tomato_Spider_mites_Two_spotted_spider_mite",
+        "Tomato__Target_Spot",
+        "Tomato__Tomato_YellowLeaf__Curl_Virus",
+        "Tomato__Tomato_mosaic_virus",
+        "Tomato_healthy",
+        "Not_tomato"
+    ],
+    "min_conf": 0.6,
+    "min_margin": 0.15,
+    "tta": true,
+    "pretrained": true
+}
