@@ -1,0 +1,13 @@
+﻿image,predicted_class,confidence,top2,top3,status
+D:\PBL_Tomato\Tomato11\leaf_ai_model\Tomato11\anh_that\anhkg1.jpg,Tomato_Early_blight,0.961548388004303,Tomato__Tomato_mosaic_virus,Tomato_Late_blight,SUCCESS
+D:\PBL_Tomato\Tomato11\leaf_ai_model\Tomato11\anh_that\anhnt1.png,Not_tomato,0.9090845584869385,Tomato__Tomato_mosaic_virus,Tomato_Leaf_Mold,SUCCESS
+D:\PBL_Tomato\Tomato11\leaf_ai_model\Tomato11\anh_that\anhsc1.png,Tomato__Target_Spot,0.8454077839851379,Tomato_Bacterial_spot,Tomato_Septoria_leaf_spot,SUCCESS
+D:\PBL_Tomato\Tomato11\leaf_ai_model\Tomato11\anh_that\anht1.jpg,Tomato_Septoria_leaf_spot,0.5994257926940918,Tomato__Target_Spot,Tomato_healthy,SUCCESS
+D:\PBL_Tomato\Tomato11\leaf_ai_model\Tomato11\anh_that\anht2.jpg,Tomato_Spider_mites_Two_spotted_spider_mite,0.5211277008056641,Tomato_Leaf_Mold,Tomato_Septoria_leaf_spot,SUCCESS
+D:\PBL_Tomato\Tomato11\leaf_ai_model\Tomato11\anh_that\anht3.jpg,Tomato_Early_blight,0.6336069107055664,Tomato_Septoria_leaf_spot,Tomato_Late_blight,SUCCESS
+D:\PBL_Tomato\Tomato11\leaf_ai_model\Tomato11\anh_that\anht4.jpg,Tomato_Bacterial_spot,0.9401995539665222,Not_tomato,Tomato__Tomato_mosaic_virus,SUCCESS
+D:\PBL_Tomato\Tomato11\leaf_ai_model\Tomato11\anh_that\anht5.jpg,Tomato_Late_blight,0.9624300003051758,Tomato__Tomato_mosaic_virus,Tomato_Early_blight,SUCCESS
+D:\PBL_Tomato\Tomato11\leaf_ai_model\Tomato11\anh_that\anht6.jpg,Tomato_Late_blight,0.9180862307548523,Tomato__Target_Spot,Tomato__Tomato_mosaic_virus,SUCCESS
+D:\PBL_Tomato\Tomato11\leaf_ai_model\Tomato11\anh_that\anht7.jpg,Tomato_Late_blight,0.7441384196281433,Tomato_Bacterial_spot,Tomato__Tomato_YellowLeaf__Curl_Virus,SUCCESS
+D:\PBL_Tomato\Tomato11\leaf_ai_model\Tomato11\anh_that\anht8.jpg,Tomato_Bacterial_spot,0.9045487642288208,Tomato_Late_blight,Tomato__Tomato_mosaic_virus,SUCCESS
+D:\PBL_Tomato\Tomato11\leaf_ai_model\Tomato11\anh_that\anht9.jpg,Tomato_Septoria_leaf_spot,0.8293924331665039,Tomato_Late_blight,Tomato__Target_Spot,SUCCESS
