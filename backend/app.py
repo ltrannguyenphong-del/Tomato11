@@ -14,6 +14,11 @@ import numpy as np
 import onnxruntime as ort
 import pandas as pd
 from PIL import Image, ImageOps
+from sensor_advisor import (
+    build_combined_assessment,
+    HIGH_HUMIDITY_THRESHOLD,
+    HIGH_HUMIDITY_DURATION_SEC,
+)
 
 try:
     import serial
@@ -143,7 +148,41 @@ def get_latest_csv_file():
         files = glob.glob(str(PROJECT_ROOT / "**" / "tomato_sensors_*.csv"), recursive=True)
     return max(files, key=os.path.getmtime) if files else None
 
+def _parse_iso_safe(ts_str: str):
+    dt = datetime.fromisoformat(ts_str)
+    if dt.tzinfo is not None:
+        return dt.astimezone().replace(tzinfo=None)
+    return dt
 
+
+def has_sustained_high_humidity(
+    df: pd.DataFrame,
+    threshold: float = HIGH_HUMIDITY_THRESHOLD,
+    min_seconds: int = HIGH_HUMIDITY_DURATION_SEC,
+) -> bool:
+    if df.empty or "humidity_percent" not in df.columns or "timestamp" not in df.columns:
+        return False
+
+    high_timestamps = []
+    for idx in range(len(df) - 1, -1, -1):
+        try:
+            rh_val = float(df.iloc[idx]["humidity_percent"])
+        except (TypeError, ValueError):
+            break
+        if rh_val >= threshold:
+            high_timestamps.append(str(df.iloc[idx]["timestamp"]))
+        else:
+            break
+
+    if len(high_timestamps) < 2:
+        return False
+
+    try:
+        newest_dt = _parse_iso_safe(high_timestamps[0])
+        oldest_dt = _parse_iso_safe(high_timestamps[-1])
+        return (newest_dt - oldest_dt).total_seconds() >= min_seconds
+    except ValueError:
+        return False
 @app.route("/api/sensors", methods=["GET"])
 def get_sensor_data():
     try:
@@ -152,14 +191,43 @@ def get_sensor_data():
             df = pd.read_csv(latest_csv)
             if not df.empty:
                 latest = df.iloc[-1]
+                temp = float(latest.get("temperature_C", 0.0))
+                hum = float(latest.get("humidity_percent", 0.0))
+                soil_adc = int(latest.get("soil_adc", 0))
+                light = float(latest.get("light_lux", 0.0))
+                ts_str = str(latest.get("timestamp", ""))
+
+                sustained_rh = has_sustained_high_humidity(df)
+                assessment = build_combined_assessment(
+                    temperature_c=temp,
+                    humidity_rh=hum,
+                    soil_adc=soil_adc,
+                    light_lux=light,
+                    timestamp_iso=ts_str,
+                    sustained_high_rh_30m=sustained_rh,
+                )
+
                 return jsonify({
-                    "temperature": float(latest.get("temperature_C", 0.0)),
-                    "humidity": float(latest.get("humidity_percent", 0.0)),
-                    "soil_adc": int(latest.get("soil_adc", 0)),
-                    "light_lux": float(latest.get("light_lux", 0.0)),
-                    "status": "Normal"
+                    "temperature": temp,
+                    "humidity": hum,
+                    "soil_adc": soil_adc,
+                    "soil_moisture": assessment["soil_moisture_percent"],
+                    "light_lux": light,
+                    "status": assessment["overall_status"],
+                    "alerts": assessment["alerts"],
+                    "recommendations": assessment["recommendations"],
+                    "details": assessment["sensors"],
                 })
-        return jsonify({"temperature": 0.0, "humidity": 0.0, "soil_adc": 0, "light_lux": 0.0, "status": "No Data"})
+        return jsonify({
+            "temperature": 0.0,
+            "humidity": 0.0,
+            "soil_adc": 0,
+            "soil_moisture": 0.0,
+            "light_lux": 0.0,
+            "status": "No Data",
+            "alerts": [],
+            "recommendations": [],
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -205,7 +273,34 @@ def predict_disease():
             {"label": class_names[int(i)], "confidence": round(float(probs[i]), 4)}
             for i in order[:3]
         ]
+        disease_recommendations = {
+            "Tomato_Bacterial_spot": "Cách ly/cắt bỏ lá bệnh nặng, tránh tưới phun lên lá, vệ sinh dụng cụ và theo dõi thêm các lá lân cận.",
+            "Tomato_Early_blight": "Tỉa bỏ lá già/lá bệnh ở tầng dưới, giữ gốc thông thoáng, tưới gốc thay vì tưới lá và kiểm tra độ ẩm.",
+            "Tomato_Late_blight": "Cần xử lý sớm vì lây nhanh khi ẩm mát: loại bỏ lá/cành nhiễm nặng, giảm ẩm tán lá và tăng thông gió.",
+            "Tomato_Leaf_Mold": "Giảm độ ẩm không khí, tăng lưu thông gió/thông thoáng tán và tránh tưới làm ướt lá vào chiều tối.",
+            "Tomato_Septoria_leaf_spot": "Cắt bỏ lá có đốm bệnh, dọn tàn dư lá rụng quanh gốc, tưới vào vùng rễ và giữ tán cây thông thoáng.",
+            "Tomato_Spider_mites_Two_spotted_spider_mite": "Kiểm tra mặt dưới lá, duy trì độ ẩm/tưới hợp lý và theo dõi mật độ nhện đỏ để xử lý kịp thời.",
+            "Tomato__Target_Spot": "Loại bỏ lá bị đốm nặng, cải thiện thông gió và tránh để tán lá ẩm ướt kéo dài.",
+            "Tomato__Tomato_YellowLeaf__Curl_Virus": "Nhổ/cách ly cây nhiễm nặng nếu cần để hạn chế lây lan, kiểm soát côn trùng môi giới và vệ sinh vườn.",
+            "Tomato__Tomato_mosaic_virus": "Vệ sinh tay/dụng cụ cắt tỉa, hạn chế tiếp xúc lây chéo và loại bỏ cây nhiễm bệnh nặng.",
+            "Tomato_healthy": "Lá khỏe mạnh. Tiếp tục duy trì chế độ tưới nước, ánh sáng và thông gió ổn định.",
+            "Không phải lá cà chua": "Ảnh không phải lá cà chua. Vui lòng chọn đúng ảnh lá cà chua để chẩn đoán.",
+            "Không chắc, cần chụp lại": "Độ tin cậy chưa đủ cao. Vui lòng chụp lại ảnh rõ nét hơn, đủ sáng và lấy rõ bề mặt lá.",
+        }
 
+        recommendation = disease_recommendations.get(
+            label,
+            "Theo dõi thêm tình trạng lá, đảm bảo thông gió và tưới nước hợp lý."
+        )
+
+        return jsonify({
+            "success": True,
+            "prediction": label,
+            "disease": label,
+            "confidence": round(top_prob * 100, 2),
+            "recommendation": recommendation,
+            "top3": top3
+        })
         return jsonify({
             "success": True,
             "prediction": label,
