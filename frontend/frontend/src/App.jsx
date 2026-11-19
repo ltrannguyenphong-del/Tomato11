@@ -1,118 +1,137 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 function App() {
-  const [sensorData, setSensorData] = useState({
-    temperature: 0,
-    humidity: 0,
-    soil_adc: 0,
-    light_lux: 0,
-    status: "Loading..."
-  });
-
+  const [sensors, setSensors] = useState({ temperature: 0, humidity: 0, soil_adc: 0, light_lux: 0 });
+  const [chartData, setChartData] = useState([]);
+  const [selectedImage, setSelectedImage] = useState(null);
   const [prediction, setPrediction] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Tự động gọi API từ Flask Backend mỗi 3 giây để cập nhật dữ liệu cảm biến thời gian thực
+  // Lấy dữ liệu cảm biến định kỳ mỗi 3 giây và đẩy vào mảng dữ liệu biểu đồ
   useEffect(() => {
-    const fetchSensorData = async () => {
+    const fetchSensors = async () => {
       try {
-        const response = await axios.get('http://127.0.0.1:5000/api/sensors');
-        setSensorData(response.data);
-      } catch (error) {
-        console.error("Lỗi khi kết nối Flask API:", error);
+        const res = await axios.get('http://localhost:5000/api/sensors');
+        const data = res.data;
+        setSensors(data);
+
+        // Thêm mốc thời gian hiện tại để vẽ biểu đồ lịch sử
+        const currentTime = new Date().toLocaleTimeString();
+        setChartData((prevData) => {
+          const newData = [...prevData, { time: currentTime, temp: data.temperature, hum: data.humidity }];
+          // Giữ tối đa 15 điểm dữ liệu gần nhất cho biểu đồ gọn gàng
+          if (newData.length > 15) newData.shift();
+          return newData;
+        });
+      } catch (err) {
+        console.error("Lỗi kết nối API cảm biến:", err);
       }
     };
 
-    fetchSensorData();
-    const interval = setInterval(fetchSensorData, 3000);
+    fetchSensors();
+    const interval = setInterval(fetchSensors, 3000);
     return () => clearInterval(interval);
   }, []);
 
-  // Giả lập gửi yêu cầu chẩn đoán bệnh lá cà chua
-  const handleTestPrediction = async () => {
+  // Xử lý khi chọn file ảnh
+  const handleImageChange = (e) => {
+    setSelectedImage(e.target.files[0]);
+  };
+
+  // Gửi ảnh lên Flask Backend để chạy AI chẩn đoán
+  const handleUpload = async () => {
+    if (!selectedImage) {
+      alert("Vui lòng chọn một file ảnh lá cà chua trước!");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('image', selectedImage);
+
     setLoading(true);
     try {
-      const response = await axios.post('http://127.0.0.1:5000/api/predict', {});
-      setPrediction(response.data);
-    } catch (error) {
-      console.error("Lỗi dự đoán bệnh:", error);
+      const res = await axios.post('http://localhost:5000/api/predict', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setPrediction(res.data);
+    } catch (err) {
+      console.error("Lỗi khi dự đoán ảnh:", err);
+      alert("Có lỗi xảy ra khi phân tích ảnh qua AI.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
-    <div className="container my-4">
-      {/* Tiêu đề Dashboard */}
-      <div className="p-4 mb-4 bg-light rounded-3 shadow-sm border">
-        <h1 className="text-success fw-bold">🍅 Tomato SCADA & AI Dashboard</h1>
-        <p className="text-muted">Hệ thống giám sát vi khí hậu thời gian thực & chẩn đoán bệnh lá cà chua</p>
-      </div>
-
-      {/* Phần 1: Hiển thị thông số cảm biến */}
-      <h3 className="mb-3">📊 Giám sát Môi trường (Real-time)</h3>
-      <div className="row g-4 mb-5">
-        <div className="col-md-3">
-          <div className="card text-white bg-primary shadow">
-            <div className="card-body">
-              <h5 className="card-title">Nhiệt độ</h5>
-              <h3>{sensorData.temperature} °C</h3>
-            </div>
+    <div className="container py-4">
+      <h2 className="text-center mb-4 fw-bold text-success">Hệ thống SCADA Giám sát Vi khí hậu & AI Lá Cà Chua</h2>
+      
+      {/* Khung hiển thị thông số cảm biến Real-time */}
+      <div className="row text-center mb-4">
+        <div className="col-md-3 mb-3">
+          <div className="p-3 bg-primary text-white rounded shadow-sm">
+            <h5>Nhiệt độ</h5>
+            <h3>{sensors.temperature} °C</h3>
           </div>
         </div>
-
-        <div className="col-md-3">
-          <div className="card text-white bg-success shadow">
-            <div className="card-body">
-              <h5 className="card-title">Độ ẩm không khí</h5>
-              <h3>{sensorData.humidity} %</h3>
-            </div>
+        <div className="col-md-3 mb-3">
+          <div className="p-3 bg-success text-white rounded shadow-sm">
+            <h5>Độ ẩm không khí</h5>
+            <h3>{sensors.humidity} %</h3>
           </div>
         </div>
-
-        <div className="col-md-3">
-          <div className="card text-white bg-warning shadow">
-            <div className="card-body">
-              <h5 className="card-title">ADC Độ ẩm đất</h5>
-              <h3>{sensorData.soil_adc}</h3>
-            </div>
+        <div className="col-md-3 mb-3">
+          <div className="p-3 bg-warning text-dark rounded shadow-sm">
+            <h5>ADC Đất</h5>
+            <h3>{sensors.soil_adc}</h3>
           </div>
         </div>
-
-        <div className="col-md-3">
-          <div className="card text-white bg-info shadow">
-            <div className="card-body">
-              <h5 className="card-title">Cường độ ánh sáng</h5>
-              <h3>{sensorData.light_lux} lux</h3>
-            </div>
+        <div className="col-md-3 mb-3">
+          <div className="p-3 bg-info text-white rounded shadow-sm">
+            <h5>Ánh sáng</h5>
+            <h3>{sensors.light_lux} lux</h3>
           </div>
         </div>
       </div>
 
-      {/* Phần 2: Chẩn đoán bệnh qua ảnh lá */}
-      <div className="card shadow-sm">
-        <div className="card-header bg-dark text-white">
-          <h4 className="mb-0">📸 Chẩn đoán Sâu bệnh Lá Cà Chua</h4>
+      {/* Khung Biểu đồ Lịch sử Real-time */}
+      <div className="card p-4 shadow-sm mb-4">
+        <h4 className="mb-3 text-secondary">📈 Biểu đồ Biến thiên Nhiệt độ & Độ ẩm (Real-time)</h4>
+        <div style={{ width: '100%', height: 300 }}>
+          <ResponsiveContainer>
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="time" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="temp" name="Nhiệt độ (°C)" stroke="#0d6efd" strokeWidth={2} />
+              <Line type="monotone" dataKey="hum" name="Độ ẩm (%)" stroke="#198754" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
-        <div className="card-body">
-          <p>Tải lên hoặc chọn ảnh lá để hệ thống phân tích bằng mô hình AI:</p>
-          <button 
-            className="btn btn-outline-success mb-3" 
-            onClick={handleTestPrediction}
-            disabled={loading}
-          >
-            {loading ? "Đang phân tích..." : "Chạy thử nghiệm chẩn đoán"}
-          </button>
+      </div>
 
-          {prediction && (
-            <div className="alert alert-secondary mt-3">
-              <h5>Kết quả phân tích từ AI:</h5>
-              <p><strong>Bệnh phát hiện:</strong> <span className="text-danger">{prediction.disease}</span></p>
-              <p><strong>Độ tin cậy:</strong> {prediction.confidence}%</p>
-              <p><strong>Khuyến nghị:</strong> {prediction.recommendation}</p>
-            </div>
-          )}
+      {/* Khung Chẩn đoán AI */}
+      <div className="card p-4 shadow-sm">
+        <h4 className="mb-3 text-secondary">📷 Chẩn đoán Sâu bệnh Lá Cà Chua bằng AI</h4>
+        <div className="mb-3">
+          <input type="file" className="form-control" accept="image/*" onChange={handleImageChange} />
         </div>
+        <button className="btn btn-dark w-100 py-2" onClick={handleUpload} disabled={loading}>
+          {loading ? "Đang phân tích hình ảnh qua AI..." : "Tải lên và Chẩn đoán"}
+        </button>
+
+        {prediction && (
+          <div className="mt-4 p-3 bg-light rounded border">
+            <h5>Kết quả phân tích từ AI:</h5>
+            <p><strong>Bệnh phát hiện:</strong> <span className="text-danger">{prediction.disease}</span></p>
+            <p><strong>Độ tin cậy:</strong> {prediction.confidence}%</p>
+            <p><strong>Khuyến nghị:</strong> {prediction.recommendation}</p>
+          </div>
+        )}
       </div>
     </div>
   );
