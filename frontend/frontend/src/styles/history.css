@@ -1,0 +1,635 @@
+
+/* ==========================================
+   TOMATO SMARTCARE - HISTORY
+   ENGINEERING DASHBOARD
+   ========================================== */
+
+.app-shell.page-history {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.app-shell.page-history .app-sidebar {
+  height: 100dvh;
+  overflow-y: auto;
+}
+
+.app-shell.page-history .app-workspace {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-shell.page-history .app-header {
+  flex-shrink: 0;
+}
+
+.app-shell.page-history .page-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 14px 20px;
+  background: #f4f7fa;
+}
+
+.app-shell.page-history .workspace-footer {
+  flex-shrink: 0;
+}
+
+.history-page {
+  --history-primary: #326d9b;
+  --history-text: #263b4b;
+  --history-muted: #718494;
+  --history-border: #dfe7ee;
+
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--history-text);
+}
+
+.history-page * {
+  box-sizing: border-box;
+}
+
+/* ==========================================
+   PAGE HEADER
+   ========================================== */
+
+.history-heading {
+  flex-shrink: 0;
+  min-height: 105px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 20px 24px;
+  background: #ffffff;
+  border: 1px solid var(--history-border);
+  border-radius: 12px;
+}
+
+.history-eyebrow {
+  color: #62819b;
+  font-size: 11px;
+  letter-spacing: 0.7px;
+  font-weight: 700;
+}
+
+.history-heading h2 {
+  margin: 7px 0;
+  color: #294d6b;
+  font-size: 25px;
+  font-weight: 700;
+}
+
+.history-heading p {
+  margin: 0;
+  color: var(--history-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.history-heading-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  background: #eaf2f8;
+  color: var(--history-primary);
+  border-radius: 8px;
+}
+
+/* ==========================================
+   STATISTICS CARDS
+   ========================================== */
+
+.history-stats {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.history-stat {
+  min-width: 0;
+  min-height: 85px;
+
+  display: flex;
+  align-items: center;
+  gap: 13px;
+
+  padding: 15px 17px;
+
+  background: #ffffff;
+  border: 1px solid var(--history-border);
+  border-radius: 12px;
+
+  box-shadow: 0 2px 8px rgba(38, 59, 75, 0.035);
+}
+
+.history-stat-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 8px;
+  background: #eaf2f8;
+  color: var(--history-primary);
+}
+
+.history-stat span {
+  display: block;
+  color: #718494;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.history-stat strong {
+  display: block;
+  margin-top: 5px;
+
+  color: #294d6b;
+  font-size: 25px;
+  line-height: 1.1;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* All summary icons use the same primary color */
+
+.history-stat-total .history-stat-icon,
+.history-stat-sensor .history-stat-icon,
+.history-stat-ai .history-stat-icon {
+  background: #eaf2f8;
+  color: #326d9b;
+}
+
+.history-stat-alert .history-stat-icon {
+  background: #fff4e6;
+  color: #a66a26;
+}
+
+/* ==========================================
+   MAIN HISTORY PANEL
+   ========================================== */
+
+.history-panel {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  background: #ffffff;
+  border: 1px solid var(--history-border);
+  border-radius: 12px;
+
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(38, 59, 75, 0.035);
+}
+
+.history-panel-top {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+
+  padding: 17px 19px 13px;
+}
+
+.history-panel-top h3 {
+  margin: 0 0 5px;
+  color: #3c596e;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.history-panel-top p {
+  margin: 0;
+  color: #8799a7;
+  font-size: 11px;
+}
+
+/* EXPORT BUTTON */
+
+.history-export {
+  min-height: 37px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: 9px 13px;
+
+  background: var(--history-primary);
+  color: #ffffff;
+  border: 1px solid var(--history-primary);
+  border-radius: 7px;
+
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+
+  transition: background-color 0.15s ease;
+}
+
+.history-export:hover {
+  background: #25577f;
+}
+
+/* ==========================================
+   SEARCH AND FILTER
+   ========================================== */
+
+.history-toolbar {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 0 19px 15px;
+}
+
+.history-search {
+  flex: 1;
+  max-width: 390px;
+  min-width: 0;
+  height: 39px;
+
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  padding: 0 12px;
+
+  background: #ffffff;
+  border: 1px solid #d5e0e9;
+  border-radius: 7px;
+  color: #718494;
+}
+
+.history-search:focus-within {
+  border-color: #7ba3c0;
+}
+
+.history-search input {
+  width: 100%;
+  min-width: 0;
+
+  border: none;
+  outline: none;
+  background: transparent;
+
+  font: inherit;
+  font-size: 12px;
+  color: #263b4b;
+}
+
+.history-search input::placeholder {
+  color: #94a3af;
+}
+
+.history-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.history-filters button {
+  min-height: 36px;
+  padding: 8px 11px;
+
+  background: #ffffff;
+  color: #607587;
+  border: 1px solid #dce5ec;
+  border-radius: 7px;
+
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+
+  transition: background-color 0.15s ease;
+}
+
+.history-filters button:hover {
+  background: #f0f5f9;
+}
+
+.history-filters button.active {
+  background: #eaf2f8;
+  border-color: #b9d0e2;
+  color: #326d9b;
+  font-weight: 700;
+}
+
+/* ==========================================
+   HISTORY TABLE
+   ========================================== */
+
+.history-table-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.history-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f3f6f9;
+}
+
+.history-table th {
+  padding: 12px 17px;
+  color: #607587;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--history-border);
+}
+
+.history-table td {
+  padding: 12px 17px;
+  color: #3e5364;
+  font-size: 12px;
+  border-bottom: 1px solid #e9eef2;
+  vertical-align: middle;
+}
+
+.history-table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.history-table tbody tr:hover {
+  background: #f6f9fb;
+}
+
+.history-table tbody tr.selected {
+  background: #eaf2f8;
+}
+
+/* DATE AND TIME */
+
+.history-date {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #7893a8;
+}
+
+.history-date strong {
+  display: block;
+  color: #3e5364;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.history-date small {
+  display: block;
+  margin-top: 4px;
+  color: #899ba9;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ACTIVITY TYPE */
+
+.history-type {
+  width: fit-content;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 6px 9px;
+  border-radius: 6px;
+
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.history-type-sensor {
+  background: #eaf2f8;
+  color: #326d9b;
+}
+
+.history-type-ai {
+  background: #edf1f7;
+  color: #526e91;
+}
+
+.history-type-alert {
+  background: #fff4e6;
+  color: #a66a26;
+}
+
+/* ACTIVITY DETAILS */
+
+.history-activity strong {
+  display: block;
+  margin-bottom: 5px;
+
+  color: #334f63;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.history-activity small {
+  color: #718494;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* STATUS */
+
+.history-status {
+  display: inline-block;
+
+  padding: 6px 10px;
+  border-radius: 6px;
+
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.history-status.normal {
+  background: #edf7f2;
+  color: #28785b;
+}
+
+.history-status.warning {
+  background: #fff4e6;
+  color: #a66a26;
+}
+
+/* EMPTY STATE */
+
+.history-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #8596a3;
+  font-size: 12px;
+}
+
+/* ==========================================
+   PANEL FOOTER
+   ========================================== */
+
+.history-panel-footer {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 11px 19px;
+
+  background: #ffffff;
+  border-top: 1px solid #e9eef2;
+
+  color: #718494;
+  font-size: 11px;
+}
+
+/* DEMO NOTE */
+
+.history-notice {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 10px 13px;
+
+  background: #f0f4f7;
+  border: 1px solid #e4ebf0;
+  border-radius: 8px;
+
+  color: #718494;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.history-notice svg {
+  flex-shrink: 0;
+}
+
+/* ==========================================
+   RESPONSIVE
+   ========================================== */
+
+@media (max-width: 1150px) {
+  .history-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .history-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .history-search {
+    max-width: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell.page-history,
+  .app-shell.page-history .app-workspace {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .app-shell.page-history .page-content {
+    overflow: visible;
+    padding: 12px;
+  }
+
+  .history-page {
+    height: auto;
+  }
+
+  .history-heading {
+    padding: 16px;
+  }
+
+  .history-heading h2 {
+    font-size: 21px;
+  }
+
+  .history-panel {
+    min-height: 430px;
+  }
+
+  .history-table-scroll {
+    max-height: 450px;
+  }
+
+  .history-panel-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 520px) {
+  .history-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .history-stat {
+    padding: 11px;
+    gap: 9px;
+  }
+
+  .history-stat strong {
+    font-size: 21px;
+  }
+
+  .history-stat-icon {
+    width: 35px;
+    height: 35px;
+  }
+
+  .history-panel-top {
+    align-items: flex-start;
+  }
+
+  .history-export {
+    padding: 8px;
+    white-space: nowrap;
+  }
+}

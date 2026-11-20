@@ -1,0 +1,743 @@
+
+/* ==========================================
+   TOMATO SMARTCARE - AI DIAGNOSIS
+   ENGINEERING DASHBOARD
+   ========================================== */
+
+/* PAGE LAYOUT */
+
+.app-shell.page-diagnosis {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.app-shell.page-diagnosis .app-workspace {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-shell.page-diagnosis .app-sidebar {
+  height: 100dvh;
+  overflow-y: auto;
+}
+
+.app-shell.page-diagnosis .app-header {
+  flex-shrink: 0;
+}
+
+.app-shell.page-diagnosis .page-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 14px 20px;
+  background: #f4f7fa;
+}
+
+.app-shell.page-diagnosis .workspace-footer {
+  flex-shrink: 0;
+}
+
+.leaf-clinic {
+  --clinic-primary: #326d9b;
+  --clinic-primary-dark: #25577f;
+  --clinic-text: #263b4b;
+  --clinic-muted: #718494;
+  --clinic-border: #dfe7ee;
+
+  height: 100%;
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  color: var(--clinic-text);
+}
+
+.leaf-clinic * {
+  box-sizing: border-box;
+}
+
+/* ==========================================
+   PAGE HEADING
+   ========================================== */
+
+.clinic-banner {
+  flex-shrink: 0;
+  min-height: 105px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 20px 24px;
+
+  background: #ffffff;
+  border: 1px solid var(--clinic-border);
+  border-radius: 12px;
+
+  overflow: hidden;
+}
+
+.clinic-banner-text {
+  min-width: 0;
+}
+
+.clinic-kicker {
+  display: block;
+
+  color: #62819b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+}
+
+.clinic-banner h2 {
+  margin: 7px 0;
+
+  color: #294d6b;
+  font-size: 25px;
+  font-weight: 700;
+}
+
+.clinic-banner p {
+  margin: 0;
+
+  color: var(--clinic-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* Decorative elements are not needed */
+
+.clinic-heart,
+.clinic-banner-decoration,
+.clinic-flower {
+  display: none;
+}
+
+/* ==========================================
+   TWO-COLUMN WORKSPACE
+   ========================================== */
+
+.clinic-columns {
+  flex: 1;
+  min-height: 0;
+
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr);
+
+  gap: 14px;
+}
+
+.clinic-card {
+  min-width: 0;
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  padding: 18px;
+
+  background: #ffffff;
+  border: 1px solid var(--clinic-border);
+  border-radius: 12px;
+
+  overflow: hidden;
+
+  box-shadow: 0 2px 8px rgba(38, 59, 75, 0.035);
+}
+
+.clinic-card-header {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  gap: 11px;
+
+  margin-bottom: 15px;
+}
+
+.clinic-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 8px;
+}
+
+.clinic-icon.pink,
+.clinic-icon.purple {
+  background: #eaf2f8;
+  color: var(--clinic-primary);
+}
+
+.clinic-card-header h3 {
+  margin: 0 0 4px;
+
+  color: #3c596e;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.clinic-card-header p {
+  margin: 0;
+
+  color: #8799a7;
+  font-size: 11px;
+}
+
+.clinic-number {
+  margin-left: auto;
+
+  color: #9aabb8;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ==========================================
+   IMAGE UPLOAD
+   ========================================== */
+
+.clinic-file-input {
+  display: none;
+}
+
+.clinic-image-zone {
+  flex: 1;
+  min-height: 100px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #f8fafc;
+  border: 1px dashed #b7cad9;
+  border-radius: 10px;
+
+  overflow: hidden;
+}
+
+.clinic-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.clinic-image-empty {
+  padding: 16px;
+  text-align: center;
+}
+
+/* Hide large decorative emoji */
+
+.clinic-leaf-emoji {
+  display: none;
+}
+
+.clinic-image-empty strong {
+  display: block;
+
+  color: #42647e;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.clinic-image-empty p {
+  margin: 8px 0;
+
+  color: #7a8e9e;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.clinic-image-empty small {
+  color: #94a3af;
+  font-size: 11px;
+}
+
+.clinic-file-info {
+  flex-shrink: 0;
+  min-height: 37px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+
+  color: #718494;
+  font-size: 11px;
+}
+
+.clinic-file-info span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clinic-file-info button {
+  padding: 5px;
+
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #6d879a;
+
+  cursor: pointer;
+}
+
+.clinic-file-info button:hover {
+  background: #edf2f6;
+}
+
+/* ==========================================
+   DEMO SELECTOR
+   ========================================== */
+
+.clinic-demo-selector {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin-bottom: 12px;
+}
+
+.clinic-demo-selector label {
+  color: #5d7385;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.clinic-demo-selector select {
+  min-width: 0;
+  max-width: 65%;
+
+  padding: 9px 11px;
+
+  background: #ffffff;
+  border: 1px solid #d5e0e9;
+  border-radius: 7px;
+
+  color: #3e6079;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+/* ==========================================
+   ACTION BUTTONS
+   ========================================== */
+
+.clinic-buttons {
+  flex-shrink: 0;
+
+  display: flex;
+  gap: 10px;
+}
+
+.clinic-buttons button {
+  min-height: 40px;
+  padding: 10px 13px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  border-radius: 7px;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: background-color 0.15s ease;
+}
+
+.clinic-select-btn {
+  flex: 0 0 36%;
+
+  background: #ffffff;
+  border: 1px solid #cddce7;
+
+  color: #426d8c;
+}
+
+.clinic-select-btn:hover {
+  background: #f0f5f9;
+}
+
+.clinic-analyze-btn {
+  flex: 1;
+
+  background: var(--clinic-primary);
+  border: 1px solid var(--clinic-primary);
+
+  color: #ffffff;
+}
+
+.clinic-analyze-btn:hover:not(:disabled) {
+  background: var(--clinic-primary-dark);
+}
+
+.clinic-analyze-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ==========================================
+   ERROR MESSAGE
+   ========================================== */
+
+.clinic-error {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  margin-bottom: 10px;
+  padding: 9px 11px;
+
+  background: #fceded;
+  border: 1px solid #f1d0d0;
+  border-radius: 7px;
+
+  color: #b54949;
+  font-size: 11px;
+}
+
+/* ==========================================
+   RESULT PLACEHOLDER
+   ========================================== */
+
+.clinic-waiting {
+  flex: 1;
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 22px;
+
+  background: #f8fafc;
+  border: 1px dashed #d7e1e9;
+  border-radius: 10px;
+
+  text-align: center;
+}
+
+.clinic-doctor {
+  display: none;
+}
+
+.clinic-waiting h3 {
+  margin: 0 0 10px;
+
+  color: #42647e;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.clinic-waiting p {
+  max-width: 310px;
+  margin: 0;
+
+  color: #7a8e9e;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.clinic-waiting-tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  margin-top: 18px;
+  padding: 7px 11px;
+
+  background: #eaf2f8;
+  border-radius: 7px;
+
+  color: #5c809c;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ==========================================
+   AI RESULT
+   ========================================== */
+
+.clinic-result-body {
+  flex: 1;
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* PREDICTION STATUS */
+
+.clinic-prediction {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 13px;
+
+  background: #edf7f2;
+  border: 1px solid #d3e8dc;
+  border-radius: 9px;
+
+  color: #28785b;
+}
+
+.clinic-prediction.is-uncertain {
+  background: #fff4e6;
+  border-color: #efd9b9;
+  color: #a66a26;
+}
+
+.clinic-prediction small {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.clinic-prediction h4 {
+  margin: 4px 0 0;
+
+  font-size: 16px;
+  font-weight: 700;
+
+  overflow-wrap: anywhere;
+}
+
+/* CONFIDENCE */
+
+.clinic-confidence {
+  flex-shrink: 0;
+
+  padding: 13px;
+
+  background: #f3f7fa;
+  border: 1px solid #e3eaf0;
+  border-radius: 9px;
+}
+
+.clinic-confidence-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+
+  color: #55758d;
+  font-size: 12px;
+}
+
+.clinic-confidence-label strong {
+  color: #295b81;
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.clinic-confidence-track {
+  height: 8px;
+  margin-top: 10px;
+
+  background: #dbe7f0;
+  border-radius: 5px;
+
+  overflow: hidden;
+}
+
+.clinic-confidence-track > div {
+  height: 100%;
+
+  background: var(--clinic-primary);
+  border-radius: inherit;
+
+  transition: width 0.2s ease;
+}
+
+/* TOP 3 */
+
+.clinic-top3 h4 {
+  margin: 0 0 8px;
+
+  color: #3f5d73;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.clinic-top3-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 9px 0;
+  border-bottom: 1px solid #e8edf2;
+
+  font-size: 12px;
+}
+
+.clinic-rank {
+  flex-shrink: 0;
+
+  width: 26px;
+  height: 26px;
+
+  display: grid;
+  place-items: center;
+
+  background: #eaf2f8;
+  border-radius: 6px;
+
+  color: #567d9c;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.clinic-class {
+  flex: 1;
+  min-width: 0;
+
+  color: #4f687b;
+  overflow-wrap: anywhere;
+}
+
+.clinic-top3-row strong {
+  color: #295b81;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* RECOMMENDATION */
+
+.clinic-recommendation {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+
+  padding: 13px;
+
+  background: #f1f7f3;
+  border: 1px solid #deebe1;
+  border-radius: 9px;
+
+  color: #527b60;
+}
+
+.clinic-recommendation > svg {
+  flex-shrink: 0;
+}
+
+.clinic-recommendation strong {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.clinic-recommendation p {
+  margin: 6px 0 0;
+
+  color: #607f69;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* ==========================================
+   FOOTNOTE
+   ========================================== */
+
+.clinic-disclaimer {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+
+  padding-top: 11px;
+  border-top: 1px solid #edf1f4;
+
+  color: #8595a3;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.clinic-disclaimer > svg {
+  flex-shrink: 0;
+}
+
+/* ==========================================
+   RESPONSIVE
+   ========================================== */
+
+@media (max-width: 1050px) {
+  .clinic-card {
+    padding: 13px;
+  }
+
+  .clinic-banner {
+    min-height: 90px;
+    padding: 15px 18px;
+  }
+
+  .clinic-banner h2 {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 750px) {
+  .app-shell.page-diagnosis,
+  .app-shell.page-diagnosis .app-workspace {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .app-shell.page-diagnosis .page-content {
+    overflow: visible;
+    padding: 12px;
+  }
+
+  .leaf-clinic {
+    height: auto;
+  }
+
+  .clinic-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .clinic-image-zone {
+    min-height: 230px;
+  }
+
+  .clinic-results {
+    min-height: 360px;
+  }
+
+  .clinic-waiting {
+    min-height: 230px;
+  }
+}
