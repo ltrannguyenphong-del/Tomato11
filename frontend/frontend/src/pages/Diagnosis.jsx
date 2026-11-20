@@ -5,7 +5,6 @@ import {
   ImagePlus,
   Sparkles,
   Heart,
-  Leaf,
   RotateCcw,
   CheckCircle2,
   AlertTriangle,
@@ -15,57 +14,84 @@ import {
 
 import "../styles/diagnosis.css";
 
-// Dữ liệu chỉ dùng để thử giao diện.
-// KHÔNG phải kết quả dự đoán từ mô hình AI.
-const demoCases = {
-  healthy: {
-    prediction: "Lá cà chua khỏe mạnh",
-    confidence: 94.2,
-    rejected: false,
-    top3: [
-      { name: "Healthy", value: 94.2 },
-      { name: "Early blight", value: 3.8 },
-      { name: "Late blight", value: 2.0 },
-    ],
-    advice:
-      "Tiếp tục duy trì điều kiện chăm sóc phù hợp và theo dõi lá thường xuyên.",
-  },
-  late_blight: {
-    prediction: "Bệnh mốc sương (Late blight)",
-    confidence: 87.6,
-    rejected: false,
-    top3: [
-      { name: "Late blight", value: 87.6 },
-      { name: "Early blight", value: 8.9 },
-      { name: "Leaf mold", value: 3.5 },
-    ],
-    advice:
-      "Kiểm tra lại các triệu chứng, hạn chế lá bị ẩm kéo dài và tham khảo hướng dẫn phòng trừ phù hợp.",
-  },
-  rejected: {
-    prediction: "Chưa thể xác định",
-    confidence: 43.5,
-    rejected: true,
-    top3: [
-      { name: "Không chắc chắn", value: 43.5 },
-      { name: "Healthy", value: 31.0 },
-      { name: "Late blight", value: 25.5 },
-    ],
-    advice:
-      "Hãy chụp lại ảnh với ánh sáng tốt, lá rõ nét và ít vật thể che khuất.",
-  },
+const API_URL = "http://127.0.0.1:5000/api/predict";
+
+const formatPercent = (value) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "0.0%";
+
+  // Backend có thể trả xác suất dạng 0-1 hoặc phần trăm 0-100.
+  const percent = number <= 1 ? number * 100 : number;
+  return `${percent.toFixed(1)}%`;
 };
 
-const formatPercent = (value) => `${value.toFixed(1)}%`;
+const getAdvice = (prediction, rejected) => {
+  if (rejected) {
+    return "Ảnh chưa đủ điều kiện để đưa ra kết luận đáng tin cậy. Hãy chụp lại lá rõ nét, đủ sáng và đặt lá trong khung hình.";
+  }
+
+  if (prediction === "Not_tomato") {
+    return "Ảnh có thể không phải lá cà chua. Hãy chụp rõ một chiếc lá cà chua và thử lại.";
+  }
+
+  if (prediction.toLowerCase().includes("healthy")) {
+    return "Lá được nhận diện là khỏe mạnh. Hãy tiếp tục duy trì điều kiện chăm sóc phù hợp và theo dõi thường xuyên.";
+  }
+
+  return "Hãy kiểm tra kỹ các triệu chứng trên lá, theo dõi diễn biến bệnh và tham khảo hướng dẫn phòng trừ phù hợp.";
+};
+
+function normalizeResult(data) {
+  const prediction =
+    data.prediction ??
+    data.class_name ??
+    data.class ??
+    data.label ??
+    "Chưa xác định";
+
+  const confidence = Number(
+    data.confidence ?? data.probability ?? 0
+  );
+
+  const rawTop3 = data.top3 ?? data.top_3 ?? [];
+
+  const top3 = rawTop3.map((item) => ({
+    name:
+      item.name ??
+      item.class_name ??
+      item.class ??
+      item.label ??
+      "Unknown",
+    value: Number(
+      item.value ??
+      item.confidence ??
+      item.probability ??
+      0
+    ),
+  }));
+
+  const rejected =
+    Boolean(data.rejected) ||
+    prediction === "Not_tomato" ||
+    prediction === "Chưa thể xác định";
+
+  return {
+    prediction,
+    confidence,
+    rejected,
+    top3,
+    advice: data.advice || getAdvice(prediction, rejected),
+  };
+}
 
 function Diagnosis() {
   const fileInput = useRef(null);
 
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState("");
-  const [demoCase, setDemoCase] = useState("healthy");
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!file) {
@@ -107,20 +133,58 @@ function Diagnosis() {
     setFile(null);
     setResult(null);
     setError("");
+    setLoading(false);
 
     if (fileInput.current) {
       fileInput.current.value = "";
     }
   };
 
-  const runDemo = () => {
+  const runPrediction = async () => {
     if (!file) {
       setError("Bạn hãy chọn ảnh lá cà chua trước nhé!");
       return;
     }
 
+    setLoading(true);
     setError("");
-    setResult(demoCases[demoCase]);
+    setResult(null);
+
+    try {
+      const formData = new FormData();
+
+      // Tên trường phải khớp với request.files.get("image") ở Flask.
+      formData.append("image", file);
+
+      const response = await fetch(API_URL, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || data.message || "Không thể dự đoán ảnh."
+        );
+      }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setResult(normalizeResult(data));
+    } catch (err) {
+      console.error("Prediction error:", err);
+
+      setError(
+        err.message?.includes("Failed to fetch")
+          ? "Không kết nối được backend. Hãy kiểm tra Flask tại http://127.0.0.1:5000."
+          : err.message || "Đã xảy ra lỗi khi dự đoán."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -214,35 +278,11 @@ function Diagnosis() {
                 type="button"
                 onClick={reset}
                 aria-label="Xóa ảnh"
+                disabled={loading}
               >
                 <RotateCcw size={16} />
               </button>
             )}
-          </div>
-
-          <div className="clinic-demo-selector">
-            <label htmlFor="clinic-case">
-              Tình huống minh họa
-            </label>
-
-            <select
-              id="clinic-case"
-              value={demoCase}
-              onChange={(event) => {
-                setDemoCase(event.target.value);
-                setResult(null);
-              }}
-            >
-              <option value="healthy">
-                Lá khỏe mạnh
-              </option>
-              <option value="late_blight">
-                Bệnh mốc sương
-              </option>
-              <option value="rejected">
-                Kết quả không chắc chắn
-              </option>
-            </select>
           </div>
 
           {error && (
@@ -257,6 +297,7 @@ function Diagnosis() {
               type="button"
               className="clinic-select-btn"
               onClick={() => fileInput.current?.click()}
+              disabled={loading}
             >
               <UploadCloud size={18} />
               Chọn ảnh
@@ -265,11 +306,11 @@ function Diagnosis() {
             <button
               type="button"
               className="clinic-analyze-btn"
-              onClick={runDemo}
-              disabled={!file}
+              onClick={runPrediction}
+              disabled={!file || loading}
             >
               <ScanSearch size={18} />
-              Xem kết quả mẫu
+              {loading ? "Đang phân tích..." : "Chẩn đoán bằng AI"}
             </button>
           </div>
         </section>
@@ -283,7 +324,7 @@ function Diagnosis() {
 
             <div>
               <h3>Kết quả chẩn đoán</h3>
-              <p>02 · AI diagnosis preview</p>
+              <p>02 · AI diagnosis</p>
             </div>
 
             <span className="clinic-number">02</span>
@@ -296,11 +337,16 @@ function Diagnosis() {
                 <span>♡</span>
               </div>
 
-              <h3>Bác sĩ cà chua đã sẵn sàng!</h3>
+              <h3>
+                {loading
+                  ? "Bác sĩ đang kiểm tra chiếc lá..."
+                  : "Bác sĩ cà chua đã sẵn sàng!"}
+              </h3>
 
               <p>
-                Chọn ảnh và một tình huống minh họa
-                ở bên trái để xem cách hiển thị kết quả.
+                {loading
+                  ? "Hệ thống đang xử lý ảnh bằng mô hình AI. Vui lòng chờ một chút."
+                  : "Chọn ảnh lá cà chua ở bên trái và nhấn chẩn đoán để xem kết quả thực tế."}
               </p>
 
               <div className="clinic-waiting-tag">
@@ -322,14 +368,14 @@ function Diagnosis() {
                 )}
 
                 <div>
-                  <small>NHÃN KẾT QUẢ MINH HỌA</small>
+                  <small>KẾT QUẢ TỪ MÔ HÌNH AI</small>
                   <h4>{result.prediction}</h4>
                 </div>
               </div>
 
               <div className="clinic-confidence">
                 <div className="clinic-confidence-label">
-                  <span>Độ tin cậy mẫu</span>
+                  <span>Độ tin cậy</span>
                   <strong>
                     {formatPercent(result.confidence)}
                   </strong>
@@ -338,19 +384,27 @@ function Diagnosis() {
                 <div className="clinic-confidence-track">
                   <div
                     style={{
-                      width: `${result.confidence}%`,
+                      width: `${Math.min(
+                        100,
+                        Math.max(
+                          0,
+                          result.confidence <= 1
+                            ? result.confidence * 100
+                            : result.confidence
+                        )
+                      )}%`,
                     }}
                   />
                 </div>
               </div>
 
               <div className="clinic-top3">
-                <h4>Top 3 dự đoán minh họa</h4>
+                <h4>Top 3 dự đoán</h4>
 
                 {result.top3.map((item, index) => (
                   <div
                     className="clinic-top3-row"
-                    key={item.name}
+                    key={`${item.name}-${index}`}
                   >
                     <span className="clinic-rank">
                       {index + 1}
@@ -381,9 +435,8 @@ function Diagnosis() {
           <div className="clinic-disclaimer">
             <Info size={15} />
             <span>
-              Đây là bản xem trước giao diện.
-              Các kết quả mẫu không được tính toán từ ảnh
-              và chưa phải kết quả của AI thật.
+              Kết quả được xử lý từ ảnh tải lên bằng mô hình AI.
+              Độ chính xác phụ thuộc vào chất lượng ảnh và dữ liệu huấn luyện.
             </span>
           </div>
         </section>
