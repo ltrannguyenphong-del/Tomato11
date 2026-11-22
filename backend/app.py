@@ -1,4 +1,3 @@
-
 import csv
 import glob
 import json
@@ -23,6 +22,94 @@ from sensor_advisor import (
     HIGH_HUMIDITY_THRESHOLD,
     HIGH_HUMIDITY_DURATION_SEC,
 )
+
+try:
+    from disease_advisor import get_disease_advice
+except ImportError:
+    DISEASE_ADVICE_MAP = {
+        "Tomato_Bacterial_spot": {
+            "vi_name": "Bệnh đốm vi khuẩn",
+            "severity": "Trung bình - Cao",
+            "tip": "Kiểm tra mặt trên/dưới lá, thân và quả; tỉa lá bệnh nặng, tưới gốc, vệ sinh dụng cụ.",
+        },
+        "Tomato_Early_blight": {
+            "vi_name": "Bệnh cháy lá sớm",
+            "severity": "Trung bình - Cao",
+            "tip": "Tỉa lá già/bệnh nặng hợp lý, phủ gốc hạn chế bắn đất, tưới tại gốc và giữ tán thông thoáng.",
+        },
+        "Tomato_Late_blight": {
+            "vi_name": "Bệnh mốc sương / cháy lá muộn",
+            "severity": "Rất cao",
+            "tip": "Ưu tiên kiểm tra sớm khi vết bệnh lan nhanh hoặc ẩm ướt kéo dài; vệ sinh dụng cụ và theo dõi cây lân cận.",
+        },
+        "Tomato_Leaf_Mold": {
+            "vi_name": "Bệnh mốc lá",
+            "severity": "Trung bình - Cao",
+            "tip": "Kiểm tra mặt dưới lá, tăng thông gió và giảm thời gian lá bị ướt; đối chiếu độ ẩm không khí.",
+        },
+        "Tomato_Septoria_leaf_spot": {
+            "vi_name": "Bệnh đốm lá Septoria",
+            "severity": "Trung bình - Cao",
+            "tip": "Thu gom lá bệnh và tàn dư dưới gốc, tưới tại gốc, tránh thao tác khi lá ướt và kiểm tra thực tế.",
+        },
+        "Tomato_Spider_mites_Two_spotted_spider_mite": {
+            "vi_name": "Nhện đỏ hai chấm",
+            "severity": "Trung bình - Cao",
+            "tip": "Kiểm tra mặt dưới lá tìm nhện/trứng/tơ mảnh, theo dõi cây lân cận và xử lý theo nhóm nhện hại.",
+        },
+        "Tomato__Target_Spot": {
+            "vi_name": "Bệnh đốm vòng mục tiêu",
+            "severity": "Trung bình",
+            "tip": "Chụp rõ cả hai mặt lá, loại bỏ lá bệnh nặng, tăng thông thoáng và đối chiếu triệu chứng thực tế.",
+        },
+        "Tomato__Tomato_YellowLeaf__Curl_Virus": {
+            "vi_name": "Bệnh xoăn vàng lá cà chua",
+            "severity": "Rất cao",
+            "tip": "Kiểm tra lá non và mặt dưới lá tìm bọ phấn trắng, quản lý côn trùng môi giới và cách ly/xử lý theo hướng dẫn chuyên môn.",
+        },
+        "Tomato__Tomato_mosaic_virus": {
+            "vi_name": "Bệnh khảm lá cà chua",
+            "severity": "Rất cao",
+            "tip": "Tách riêng chăm sóc cây nghi nhiễm, rửa tay và khử trùng dụng cụ để hạn chế lây lan cơ học.",
+        },
+        "Tomato_healthy": {
+            "vi_name": "Lá cà chua khỏe mạnh",
+            "severity": "Bình thường",
+            "tip": "Chưa phát hiện dấu hiệu thuộc các lớp bệnh đã huấn luyện; tiếp tục giám sát môi trường và kiểm tra định kỳ.",
+        },
+        "Not_tomato": {
+            "vi_name": "Ảnh không phải lá cà chua",
+            "severity": "Không đánh giá",
+            "tip": "Ảnh đầu vào không phải lá cà chua hoặc chưa phù hợp; vui lòng tải lại ảnh một lá cà chua rõ nét, đủ sáng.",
+        },
+    }
+
+    def get_disease_advice(label: str) -> dict:
+        if not label:
+            return {
+                "vi_name": "Chưa xác định",
+                "severity": "Không rõ",
+                "tip": "Không nhận được nhãn dự đoán; vui lòng thử lại.",
+            }
+
+        if label in DISEASE_ADVICE_MAP:
+            return DISEASE_ADVICE_MAP[label]
+
+        if label == "Không phải lá cà chua":
+            return DISEASE_ADVICE_MAP["Not_tomato"]
+
+        if label == "Không chắc, cần chụp lại":
+            return {
+                "vi_name": "Chưa đủ độ tin cậy để kết luận",
+                "severity": "Cần xác minh",
+                "tip": "Độ tin cậy dự đoán chưa đủ cao; vui lòng chụp lại ảnh lá rõ nét, đủ sáng hơn.",
+            }
+
+        return {
+            "vi_name": label,
+            "severity": "Cần kiểm tra",
+            "tip": "Đối chiếu triệu chứng thực tế trên lá và theo dõi thêm trước khi xử lý.",
+        }
 
 try:
     import serial
@@ -692,6 +779,8 @@ def predict_disease():
             "Theo dõi thêm tình trạng lá, đảm bảo thông gió và tưới nước hợp lý."
         )
 
+        advice = get_disease_advice(label)
+
         print("\n========== PREDICTION ==========")
         print("Prediction:", label)
         print("Confidence:", round(top_prob * 100, 2), "%")
@@ -704,6 +793,7 @@ def predict_disease():
             "disease": label,
             "confidence": round(top_prob * 100, 2),
             "recommendation": recommendation,
+            "advice": advice,
             "top3": top3
         })
 

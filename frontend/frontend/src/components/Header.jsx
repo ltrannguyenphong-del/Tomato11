@@ -60,11 +60,6 @@ function Header({ activePage }) {
           <span>{today}</span>
         </div>
 
-        <div className="header-connection">
-          <WifiOff size={16} />
-          <span>Chưa kết nối ESP32</span>
-        </div>
-
         <div className="header-icon" title="Tìm kiếm">
           <Search size={19} />
         </div>

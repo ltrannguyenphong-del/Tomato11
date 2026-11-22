@@ -6,8 +6,8 @@ from typing import Any, Dict, List, Optional, Tuple
 # 1. CẤU HÌNH HIỆU CHUẨN & THAM SỐ VẬN HÀNH
 # ==========================================
 # Thay ADC_DRY và ADC_WET bằng số đo thực tế từ cảm biến SMS-V1.2 trên ESP32
-SOIL_ADC_DRY = 3000
-SOIL_ADC_WET = 1200
+SOIL_ADC_DRY = 3360.0
+SOIL_ADC_WET = 3000.0
 
 # Ngưỡng cảnh báo bệnh do ẩm cao kéo dài (mặc định 30 phút = 1800 giây)
 HIGH_HUMIDITY_THRESHOLD = 80.0
@@ -145,33 +145,41 @@ def evaluate_humidity(rh: float, sustained_high_30m: bool = False) -> Tuple[str,
     return ("danger", "Rất ẩm", rec)
 
 
+def adc_to_soil_moisture(soil_adc: float) -> float:
+    """Quy đổi giá trị ADC cảm biến độ ẩm đất sang phần trăm (0–100%)."""
+    moisture = ((SOIL_ADC_DRY - float(soil_adc)) / (SOIL_ADC_DRY - SOIL_ADC_WET)) * 100.0
+    return round(max(0.0, min(100.0, moisture)), 1)
+
+
 def evaluate_soil_moisture(soil_pct: float) -> Tuple[str, str, str]:
     """Trả về (level, status, recommendation) cho độ ẩm đất quy đổi (0–100%)."""
-    if soil_pct <= 20.0:
+    pct = max(0.0, min(100.0, float(soil_pct)))
+
+    if pct <= 20.0:
         return (
             "danger",
             "Rất khô",
             "Kiểm tra đất tại vùng rễ. Nếu đất thực sự khô, tưới từ từ để nước thấm xuống rễ, tránh tưới quá nhiều một lần.",
         )
-    if soil_pct <= 30.0:
+    if pct <= 30.0:
         return (
             "warning",
             "Thiếu ẩm",
             "Kiểm tra nhu cầu nước của cây và độ khô của đất. Nếu đất khô, nên tưới bổ sung.",
         )
-    if soil_pct <= 45.0:
+    if pct <= 45.0:
         return (
             "watch",
             "Cần theo dõi",
             "Theo dõi xu hướng độ ẩm. Kiểm tra lại sau một khoảng thời gian, đặc biệt vào ngày nóng.",
         )
-    if soil_pct <= 70.0:
+    if pct <= 70.0:
         return (
             "normal",
             "Đủ ẩm tham khảo",
             "Duy trì theo dõi, chưa cần tưới chỉ vì đến một thời điểm cố định trong ngày.",
         )
-    if soil_pct <= 85.0:
+    if pct <= 85.0:
         return (
             "warning",
             "Ẩm cao",
@@ -182,7 +190,6 @@ def evaluate_soil_moisture(soil_pct: float) -> Tuple[str, str, str]:
         "Rất ẩm theo chỉ số",
         "Kiểm tra đất có bị úng hoặc đọng nước không. Giảm tưới nếu đất bão hòa; kiểm tra lỗ thoát nước.",
     )
-
 
 def evaluate_light(lux: float, daytime: bool = True) -> Tuple[str, str, str]:
     """Trả về (level, status, recommendation) cho BH1750 (lux)."""
