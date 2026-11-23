@@ -1,15 +1,20 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import "./App.css";
 import Diagnosis from "./pages/Diagnosis";
 import Alerts from "./pages/Alerts";
 import History from "./pages/History";
-import Settings from "./pages/Settings";
 import "./styles/engineering-theme.css";
 import UserLocationMap from "./components/UserLocationMap";
 import MetricChartModal from "./components/MetricChartModal";
-import { appendReadingToStore } from "./utils/sharedSensorSeries";
+import MockSensorPanel from "./components/MockSensorPanel";
+import {
+  appendPointToMonitoringHistory,
+  generateMockReading,
+  isMockSensorEnabled,
+  seedInitialMockHistory,
+} from "./utils/mockSensorEmulator";
 import {
   Thermometer,
   Droplets,
@@ -750,6 +755,7 @@ function OverviewPage({
   now,
   onNavigate,
   onSelectMetric,
+  onAppliedMock,
 }) {
   const tempVal = Number(liveSensor?.temperature ?? 0);
   const humVal = Number(liveSensor?.humidity ?? 0);
@@ -809,6 +815,8 @@ function OverviewPage({
       className="cute-page"
       style={{ display: "flex", flexDirection: "column", gap: "20px" }}
     >
+      <MockSensorPanel onApplied={onAppliedMock} />
+
       {/* Hàng 1: 4 thẻ thông số môi trường */}
       <section className="cute-section">
         <div className="cute-sensor-grid">
@@ -1294,47 +1302,74 @@ function App() {
     return () => clearInterval(clockTimer);
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
+  const fetchSensors = useCallback(async () => {
+    const nowObj = new Date();
 
-    const fetchSensors = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/sensors`, {
-          cache: "no-store",
-        });
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-        const data = await res.json();
-        if (!isMounted) return;
+    if (isMockSensorEnabled()) {
+      seedInitialMockHistory(12, 10, nowObj);
+      const mockData = generateMockReading(nowObj);
+      setLiveSensor(mockData);
+      setSensorConnected(true);
+      appendPointToMonitoringHistory(mockData, nowObj);
+      return;
+    }
 
-        setLiveSensor(data);
-        const hasRealData =
-          data &&
-          data.status !== "No Data" &&
-          !data.error &&
-          (Number(data.temperature) !== 0 ||
-            Number(data.humidity) !== 0 ||
-            Number(data.soil_adc) !== 0 ||
-            Number(data.light_lux) !== 0);
-        setSensorConnected(Boolean(hasRealData));
-        if (hasRealData) {
-          appendReadingToStore(data, new Date());
-        }
-      } catch {
-        if (!isMounted) return;
-        setSensorConnected(false);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/sensors`, {
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
       }
-    };
+      const data = await res.json();
 
+      const hasRealData =
+        data &&
+        data.status !== "No Data" &&
+        !data.error &&
+        (Number(data.temperature) !== 0 ||
+          Number(data.humidity) !== 0 ||
+          Number(data.soil_moisture) !== 0 ||
+          Number(data.soil_adc) !== 0 ||
+          Number(data.light_lux) !== 0);
+
+      if (hasRealData) {
+        setLiveSensor(data);
+        setSensorConnected(true);
+        appendPointToMonitoringHistory(data, nowObj);
+        return;
+      }
+
+      // Chưa có dữ liệu thật: dùng dữ liệu giả lập để không bị trắng trang
+      seedInitialMockHistory(12, 10, nowObj);
+      const fallbackMock = generateMockReading(nowObj);
+      setLiveSensor(fallbackMock);
+      setSensorConnected(false);
+      appendPointToMonitoringHistory(fallbackMock, nowObj);
+    } catch {
+      // Lỗi kết nối / backend chưa chạy: dùng dữ liệu giả lập để không bị trắng trang
+      seedInitialMockHistory(12, 10, nowObj);
+      const fallbackMock = generateMockReading(nowObj);
+      setLiveSensor(fallbackMock);
+      setSensorConnected(false);
+      appendPointToMonitoringHistory(fallbackMock, nowObj);
+    }
+  }, []);
+
+  useEffect(() => {
     fetchSensors();
     const timer = setInterval(fetchSensors, POLL_INTERVAL_MS);
 
-    return () => {
-      isMounted = false;
-      clearInterval(timer);
+    const onMockUpdated = () => {
+      fetchSensors();
     };
-  }, []);
+    window.addEventListener("tomato-mock-sensor-updated", onMockUpdated);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("tomato-mock-sensor-updated", onMockUpdated);
+    };
+  }, [fetchSensors]);
 
   return (
     <div className={`app-shell cute-theme page-${activePage}`}>
@@ -1352,6 +1387,10 @@ function App() {
               now={now}
               onNavigate={setActivePage}
               onSelectMetric={(metricKey) => setSelectedMetric(metricKey)}
+              onAppliedMock={(reading) => {
+                setLiveSensor(reading);
+                setSensorConnected(isMockSensorEnabled());
+              }}
             />
           ) : activePage === "monitoring" ? (
             <Monitoring />

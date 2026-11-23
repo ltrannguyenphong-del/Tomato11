@@ -1,14 +1,15 @@
-
+import { useState } from "react";
 import {
   LayoutDashboard,
   Activity,
   ScanSearch,
   Bell,
   History,
-  Settings,
   Sprout,
   ChevronRight,
   Leaf,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 
 const menuItems = [
@@ -37,30 +38,104 @@ const menuItems = [
     label: "Lịch sử",
     icon: History,
   },
-  {
-    id: "settings",
-    label: "Cài đặt",
-    icon: Settings,
-  },
 ];
 
 function Sidebar({ activePage, onNavigate }) {
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
-    <aside className="app-sidebar">
-      <div className="sidebar-logo">
-        <div className="logo-symbol">
-          <span>🍅</span>
+    <aside
+      className={collapsed ? "app-sidebar sidebar-collapsed" : "app-sidebar"}
+      style={{
+        width: collapsed ? "78px" : undefined,
+        minWidth: collapsed ? "78px" : undefined,
+        maxWidth: collapsed ? "78px" : undefined,
+        paddingLeft: collapsed ? "10px" : undefined,
+        paddingRight: collapsed ? "10px" : undefined,
+        transition: "width 0.22s ease, min-width 0.22s ease, padding 0.22s ease",
+        overflowX: "hidden",
+      }}
+    >
+      {/* Logo + nút thu gọn nguyên thanh sidebar */}
+      <div
+        className="sidebar-logo"
+        style={{
+          justifyContent: collapsed ? "center" : "space-between",
+          gap: "8px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            minWidth: 0,
+          }}
+        >
+          <div className="logo-symbol" style={{ flexShrink: 0 }}>
+            <span>🍅</span>
+          </div>
+
+          {!collapsed && (
+            <div className="logo-words">
+              <strong>Tomato</strong>
+              <span>SmartCare</span>
+            </div>
+          )}
         </div>
 
-        <div className="logo-words">
-          <strong>Tomato</strong>
-          <span>SmartCare</span>
-        </div>
+        {!collapsed && (
+          <button
+            type="button"
+            onClick={() => setCollapsed(true)}
+            aria-label="Thu gọn thanh bên"
+            title="Thu gọn thanh bên"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "6px",
+              borderRadius: "9px",
+              border: "1px solid #e2e8f0",
+              background: "#ffffff",
+              color: "#475569",
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            <PanelLeftClose size={16} />
+          </button>
+        )}
       </div>
 
-      <div className="sidebar-section-label">
-        MY LITTLE GARDEN
-      </div>
+      {/* Nút mở lại thanh bên khi đang ở trạng thái thụt vào */}
+      {collapsed && (
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          aria-label="Mở rộng thanh bên"
+          title="Mở rộng thanh bên"
+          style={{
+            width: "100%",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "8px",
+            marginBottom: "10px",
+            borderRadius: "10px",
+            border: "1px solid #e2e8f0",
+            background: "#ffffff",
+            color: "#475569",
+            cursor: "pointer",
+          }}
+        >
+          <PanelLeftOpen size={17} />
+        </button>
+      )}
+
+      {!collapsed && (
+        <div className="sidebar-section-label">MY LITTLE GARDEN</div>
+      )}
 
       <nav className="sidebar-navigation">
         {menuItems.map((item) => {
@@ -71,22 +146,28 @@ function Sidebar({ activePage, onNavigate }) {
             <button
               key={item.id}
               type="button"
+              title={item.label}
+              aria-label={item.label}
               className={
-                selected
-                  ? "sidebar-link selected"
-                  : "sidebar-link"
+                selected ? "sidebar-link selected" : "sidebar-link"
               }
               onClick={() => onNavigate(item.id)}
+              style={
+                collapsed
+                  ? {
+                      justifyContent: "center",
+                      paddingLeft: "0",
+                      paddingRight: "0",
+                    }
+                  : undefined
+              }
             >
-              <Icon size={20} strokeWidth={2} />
+              <Icon size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
 
-              <span>{item.label}</span>
+              {!collapsed && <span>{item.label}</span>}
 
-              {selected && (
-                <ChevronRight
-                  size={17}
-                  className="sidebar-chevron"
-                />
+              {!collapsed && selected && (
+                <ChevronRight size={17} className="sidebar-chevron" />
               )}
             </button>
           );
@@ -95,28 +176,32 @@ function Sidebar({ activePage, onNavigate }) {
 
       <div className="sidebar-spacer" />
 
-      <div className="sidebar-garden-card">
-        <div className="garden-card-icon">
-          <Sprout size={27} />
-        </div>
+      {!collapsed && (
+        <>
+          <div className="sidebar-garden-card">
+            <div className="garden-card-icon">
+              <Sprout size={27} />
+            </div>
 
-        <strong>Grow with love ♡</strong>
+            <strong>Grow with love ♡</strong>
 
-        <p>
-          Mỗi chiếc lá khỏe mạnh
-          là một khu vườn hạnh phúc.
-        </p>
+            <p>
+              Mỗi chiếc lá khỏe mạnh
+              là một khu vườn hạnh phúc.
+            </p>
 
-        <div className="garden-decoration">
-          <Leaf size={19} />
-          <span>Smart Agriculture</span>
-        </div>
-      </div>
+            <div className="garden-decoration">
+              <Leaf size={19} />
+              <span>Smart Agriculture</span>
+            </div>
+          </div>
 
-      <div className="sidebar-footer">
-        <span>Tomato SmartCare</span>
-        <small>Version 1.0 · 2026</small>
-      </div>
+          <div className="sidebar-footer">
+            <span>Tomato SmartCare</span>
+            <small>Version 1.0 · 2026</small>
+          </div>
+        </>
+      )}
     </aside>
   );
 }

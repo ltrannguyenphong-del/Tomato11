@@ -963,7 +963,7 @@ function DetailModal({
                   }}
                 >
                   <AlertTriangle size={15} />
-                  <span>Dấu hiệu thường gặp / Ý nghĩa kết quả</span>
+                  <span>Dấu hiệu nhận biết</span>
                 </div>
                 <ul
                   style={{
@@ -1002,7 +1002,7 @@ function DetailModal({
                   }}
                 >
                   <Sprout size={15} />
-                  <span>Giải pháp khuyến nghị</span>
+                  <span>Biện pháp xử lý</span>
                 </div>
                 <ol
                   style={{

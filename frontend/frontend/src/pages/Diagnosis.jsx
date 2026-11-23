@@ -732,7 +732,7 @@ function Diagnosis() {
                     }}
                   >
                     <AlertTriangle size={15} />
-                    <span>Dấu hiệu thường gặp / Ý nghĩa kết quả</span>
+                    <span>Dấu hiệu nhận biết</span>
                   </div>
                   <ul
                     style={{
@@ -771,7 +771,7 @@ function Diagnosis() {
                     }}
                   >
                     <Sprout size={15} />
-                    <span>Giải pháp khuyến nghị</span>
+                    <span>Biện pháp xử lý</span>
                   </div>
                   <ol
                     style={{
@@ -794,7 +794,7 @@ function Diagnosis() {
                 <ShieldAlert size={19} style={{ flexShrink: 0 }} />
 
                 <div>
-                  <strong>Lưu ý & khuyến nghị tham khảo ♡</strong>
+                  <strong>Lưu ý tham khảo </strong>
                   <p>{result.adviceObj.note}</p>
                 </div>
               </div>
