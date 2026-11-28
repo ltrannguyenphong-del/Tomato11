@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   UploadCloud,
   ImagePlus,
@@ -11,13 +11,61 @@ import {
   Info,
   Sprout,
   ShieldAlert,
+  Smartphone,
+  Copy,
+  Check,
+  XCircle,
 } from "lucide-react";
 
 import "../styles/diagnosis.css";
 
-const API_URL = "http://127.0.0.1:5000/api/predict";
+const FALLBACK_HOST_IP = "192.168.1.74";
+const REMOTE_SESSION_ID = "garden-01";
 const STORAGE_KEY = "tomato_smartcare_diagnosis_state_v1";
 const AI_SCANS_STORAGE_KEY = "tomato_smartcare_ai_scans_v1";
+const REMOTE_POLL_INTERVAL_MS = 1500;
+
+function getApiBaseUrl() {
+  if (typeof window !== "undefined" && window.location?.hostname) {
+    return `http://${window.location.hostname}:5000`;
+  }
+  return `http://${FALLBACK_HOST_IP}:5000`;
+}
+
+function getInitialLanHost() {
+  if (typeof window !== "undefined" && window.location?.hostname) {
+    const h = window.location.hostname;
+    if (h !== "localhost" && h !== "127.0.0.1") {
+      return h;
+    }
+  }
+  return FALLBACK_HOST_IP;
+}
+
+function dataUrlToFile(dataUrl, filename = "camera_phone.jpg") {
+  if (!dataUrl || typeof dataUrl !== "string") {
+    throw new Error("Dữ liệu ảnh không hợp lệ.");
+  }
+  const parts = dataUrl.split(",");
+  if (parts.length < 2) {
+    throw new Error("Định dạng Data URL không hợp lệ.");
+  }
+  const [header, base64] = parts;
+  const mimeMatch = header.match(/data:(.*?);base64/);
+  const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  const ext = mime.includes("png")
+    ? "png"
+    : mime.includes("webp")
+    ? "webp"
+    : "jpg";
+  const safeName = filename.includes(".") ? filename : `${filename}.${ext}`;
+  return new File([bytes], safeName, { type: mime });
+}
 
 const FALLBACK_ADVICE = {
   Tomato_Bacterial_spot: {
@@ -322,7 +370,6 @@ async function recordNewAiScan({
     const nextList = [...arr, newScan].slice(-100);
     localStorage.setItem(AI_SCANS_STORAGE_KEY, JSON.stringify(nextList));
   } catch {
-    // Nếu vẫn vượt hạn mức localStorage, lưu bản không kèm ảnh để không mất lịch sử quét
     try {
       const raw = localStorage.getItem(AI_SCANS_STORAGE_KEY);
       const list = raw ? JSON.parse(raw) : [];
@@ -408,6 +455,7 @@ function normalizeResult(data) {
 function Diagnosis() {
   const saved = loadSavedDiagnosis();
   const fileInput = useRef(null);
+  const pollTimerRef = useRef(null);
 
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState(saved?.fileName || "");
@@ -416,6 +464,51 @@ function Diagnosis() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [waitingPhonePhoto, setWaitingPhonePhoto] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [lanHost, setLanHost] = useState(getInitialLanHost);
+
+  const refreshLanHost = useCallback(async () => {
+    if (typeof window !== "undefined" && window.location?.hostname) {
+      const h = window.location.hostname;
+      if (h !== "localhost" && h !== "127.0.0.1") {
+        setLanHost(h);
+        return h;
+      }
+    }
+
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/api/network-info`, {
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const ip = typeof data?.ip === "string" ? data.ip.trim() : "";
+        if (ip && ip !== "127.0.0.1" && ip.startsWith("192.168.")) {
+          setLanHost(ip);
+          return ip;
+        }
+      }
+    } catch {
+      // Giữ nguyên lanHost hiện tại nếu chưa gọi được API
+    }
+
+    return FALLBACK_HOST_IP;
+  }, []);
+
+  useEffect(() => {
+    refreshLanHost();
+  }, [refreshLanHost]);
+
+  const frontendPort =
+    typeof window !== "undefined" && window.location?.port
+      ? window.location.port
+      : "5173";
+
+  const mobileSnapUrl = `http://${lanHost}:${frontendPort}/mobile-snap?session=${encodeURIComponent(
+    REMOTE_SESSION_ID
+  )}`;
+
   useEffect(() => {
     saveDiagnosisToStorage({
       fileName,
@@ -423,6 +516,142 @@ function Diagnosis() {
       result,
     });
   }, [fileName, preview, result]);
+
+  const stopPhonePolling = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+    setWaitingPhonePhoto(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  const executePrediction = useCallback(
+    async ({ targetFile, targetPreview, targetName }) => {
+      if (!targetFile && !targetPreview) {
+        setError("Bạn hãy chọn ảnh lá cà chua trước nhé!");
+        return;
+      }
+
+      setLoading(true);
+      setError("");
+      setResult(null);
+
+      try {
+        const formData = new FormData();
+        const effectiveName = targetName || fileName || "leaf.jpg";
+
+        if (targetFile) {
+          formData.append("image", targetFile, targetFile.name || effectiveName);
+        } else if (targetPreview) {
+          const blob = await dataUrlToBlob(targetPreview);
+          formData.append("image", blob, effectiveName);
+        }
+
+        const apiUrl = `${getApiBaseUrl()}/api/predict`;
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || data.message || "Không thể dự đoán ảnh."
+          );
+        }
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        const normalized = normalizeResult(data);
+        setResult(normalized);
+        saveDiagnosisToStorage({
+          fileName: effectiveName,
+          preview: targetPreview || "",
+          result: normalized,
+        });
+
+        await recordNewAiScan({
+          prediction: normalized.prediction,
+          confidence: normalized.confidence,
+          viName: normalized.adviceObj?.vi_name || "",
+          recommendation:
+            normalized.adviceObj?.note ||
+            normalized.adviceObj?.solutions?.[0] ||
+            "",
+          imageDataUrl: targetPreview || "",
+        });
+      } catch (err) {
+        console.error("Prediction error:", err);
+
+        setError(
+          err.message?.includes("Failed to fetch")
+            ? `Không kết nối được backend. Hãy kiểm tra Flask tại ${getApiBaseUrl()}.`
+            : err.message || "Đã xảy ra lỗi khi dự đoán."
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fileName]
+  );
+
+  const startPhonePolling = () => {
+    stopPhonePolling();
+    setError("");
+    setWaitingPhonePhoto(true);
+
+    const pollOnce = async () => {
+      try {
+        const url = `${getApiBaseUrl()}/api/remote-photo?sessionId=${encodeURIComponent(
+          REMOTE_SESSION_ID
+        )}`;
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.ok && data.hasPhoto && data.image) {
+          stopPhonePolling();
+          const phoneFile = dataUrlToFile(data.image, "camera_phone.jpg");
+          setFile(phoneFile);
+          setFileName(phoneFile.name);
+          setPreview(data.image);
+          setResult(null);
+          setError("");
+          await executePrediction({
+            targetFile: phoneFile,
+            targetPreview: data.image,
+            targetName: phoneFile.name,
+          });
+        }
+      } catch {
+        // Bỏ qua lỗi mạng tạm thời trong lúc chờ điện thoại gửi ảnh
+      }
+    };
+
+    pollOnce();
+    pollTimerRef.current = setInterval(pollOnce, REMOTE_POLL_INTERVAL_MS);
+  };
+
+  const handleCopyMobileLink = async () => {
+    try {
+      await navigator.clipboard.writeText(mobileSnapUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch {
+      setError(`Hãy mở địa chỉ này trên điện thoại: ${mobileSnapUrl}`);
+    }
+  };
 
   const handleFile = (selected) => {
     if (!selected) return;
@@ -443,6 +672,8 @@ function Diagnosis() {
       return;
     }
 
+    stopPhonePolling();
+
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = typeof reader.result === "string" ? reader.result : "";
@@ -456,6 +687,7 @@ function Diagnosis() {
   };
 
   const reset = () => {
+    stopPhonePolling();
     setFile(null);
     setFileName("");
     setPreview("");
@@ -469,72 +701,12 @@ function Diagnosis() {
     }
   };
 
-  const runPrediction = async () => {
-    if (!file && !preview) {
-      setError("Bạn hãy chọn ảnh lá cà chua trước nhé!");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    setResult(null);
-
-    try {
-      const formData = new FormData();
-
-      if (file) {
-        formData.append("image", file, file.name);
-      } else if (preview) {
-        const blob = await dataUrlToBlob(preview);
-        formData.append("image", blob, fileName || "leaf.jpg");
-      }
-
-      const response = await fetch(API_URL, {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error || data.message || "Không thể dự đoán ảnh."
-        );
-      }
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      const normalized = normalizeResult(data);
-      setResult(normalized);
-      saveDiagnosisToStorage({
-        fileName,
-        preview,
-        result: normalized,
-      });
-
-      await recordNewAiScan({
-        prediction: normalized.prediction,
-        confidence: normalized.confidence,
-        viName: normalized.adviceObj?.vi_name || "",
-        recommendation:
-          normalized.adviceObj?.note ||
-          normalized.adviceObj?.solutions?.[0] ||
-          "",
-        imageDataUrl: preview,
-      });
-    } catch (err) {
-      console.error("Prediction error:", err);
-
-      setError(
-        err.message?.includes("Failed to fetch")
-          ? "Không kết nối được backend. Hãy kiểm tra Flask tại http://127.0.0.1:5000."
-          : err.message || "Đã xảy ra lỗi khi dự đoán."
-      );
-    } finally {
-      setLoading(false);
-    }
+  const runPrediction = () => {
+    executePrediction({
+      targetFile: file,
+      targetPreview: preview,
+      targetName: fileName,
+    });
   };
 
   const hasImage = Boolean(file || preview);
@@ -590,14 +762,104 @@ function Diagnosis() {
                 <strong>Chiếc lá của bạn đâu rồi?</strong>
 
                 <p>
-                  Chọn một bức ảnh thật rõ nét
-                  để bắt đầu nhé!
+                  Chọn ảnh từ máy hoặc bấm &ldquo;Chụp từ điện thoại&rdquo;
+                  để nhận ảnh trực tiếp qua Wi-Fi!
                 </p>
 
                 <small>JPG · PNG · WEBP · Tối đa 10 MB</small>
               </div>
             )}
           </div>
+
+          {waitingPhonePhoto && (
+            <div
+              style={{
+                padding: "12px 14px",
+                borderRadius: "14px",
+                background: "#f0f9ff",
+                border: "1px solid #bae6fd",
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+                fontSize: "12.5px",
+                color: "#0c4a6e",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "8px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 700 }}>
+                  <Smartphone size={16} />
+                  <span>Đang chờ ảnh gửi từ điện thoại (cùng Wi-Fi)...</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={stopPhonePolling}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    color: "#0369a1",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                  }}
+                >
+                  <XCircle size={14} />
+                  <span>Hủy</span>
+                </button>
+              </div>
+
+              <div style={{ lineHeight: 1.5 }}>
+                Mở link trên trình duyệt điện thoại (phiên <strong>{REMOTE_SESSION_ID}</strong>),
+                chụp ảnh lá và bấm <strong>Gửi lên web</strong>:
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: "#ffffff",
+                  padding: "6px 10px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  wordBreak: "break-all",
+                }}
+              >
+                <span style={{ flex: 1, fontFamily: "monospace", fontSize: "11.5px" }}>
+                  {mobileSnapUrl}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyMobileLink}
+                  style={{
+                    flexShrink: 0,
+                    padding: "4px 8px",
+                    borderRadius: "6px",
+                    border: "1px solid #cbd5e1",
+                    background: "#f8fafc",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    fontSize: "11.5px",
+                    fontWeight: 600,
+                  }}
+                >
+                  {copiedLink ? <Check size={13} /> : <Copy size={13} />}
+                  <span>{copiedLink ? "Đã chép" : "Chép link"}</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="clinic-file-info">
             <span title={fileName}>
@@ -623,7 +885,7 @@ function Diagnosis() {
             </div>
           )}
 
-          <div className="clinic-buttons">
+          <div className="clinic-buttons" style={{ flexWrap: "wrap" }}>
             <button
               type="button"
               className="clinic-select-btn"
@@ -632,6 +894,21 @@ function Diagnosis() {
             >
               <UploadCloud size={18} />
               Chọn ảnh
+            </button>
+
+            <button
+              type="button"
+              className="clinic-select-btn"
+              onClick={waitingPhonePhoto ? stopPhonePolling : startPhonePolling}
+              disabled={loading}
+              style={
+                waitingPhonePhoto
+                  ? { borderColor: "#0284c7", background: "#e0f2fe", color: "#0369a1" }
+                  : undefined
+              }
+            >
+              <Smartphone size={18} />
+              {waitingPhonePhoto ? "Đang chờ điện thoại..." : "Chụp từ điện thoại"}
             </button>
 
             <button

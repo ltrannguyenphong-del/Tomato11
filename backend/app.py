@@ -1,7 +1,9 @@
+import base64
 import csv
 import glob
 import json
 import os
+import socket
 import threading
 import time
 from datetime import datetime
@@ -132,6 +134,22 @@ UPLOAD_FOLDER = BASE_DIR / "uploads"
 UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 
 
+def get_local_ipv4() -> str:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sock.connect(("8.8.8.8", 80))
+        return sock.getsockname()[0]
+    except Exception:
+        return "127.0.0.1"
+    finally:
+        sock.close()
+
+
+@app.route("/api/network-info", methods=["GET"])
+def network_info():
+    return jsonify({"ip": get_local_ipv4()})
+
+
 # ==========================================
 # 2. AI MODEL CONFIGURATION - TOMATO11
 # ==========================================
@@ -147,6 +165,7 @@ ort_session = None
 input_name = None
 session_rembg = None
 class_names = []
+INFER_LOCK = threading.Lock()
 
 print("\n========== INITIALIZING AI MODEL ==========")
 print("AI MODEL DIR:", AI_MODEL_DIR)
@@ -665,15 +684,15 @@ def predict_disease():
                 "error": "AI model chua duoc khoi tao"
             }), 500
 
-        # Load uploaded image
-        with Image.open(BytesIO(image_bytes)) as img:
-            x = preprocess_for_onnx(img)
+        # Load uploaded image and run inference safely
+        with INFER_LOCK:
+            with Image.open(BytesIO(image_bytes)) as img:
+                x = preprocess_for_onnx(img)
 
-        # ONNX inference
-        logits = ort_session.run(
-            None,
-            {input_name: x}
-        )[0][0]
+            logits = ort_session.run(
+                None,
+                {input_name: x}
+            )[0][0]
 
         # Stable softmax, matching infer_single.py
         logits = np.asarray(
@@ -813,13 +832,96 @@ def predict_disease():
 
 
 # ==========================================
+# 7B. REMOTE CAMERA PHOTO RELAY
+# ==========================================
+
+REMOTE_PHOTOS = {}
+REMOTE_LOCK = threading.Lock()
+PHOTO_TTL_SECONDS = 600  # 10 phút
+
+
+def _cleanup_expired_photos():
+    now = time.time()
+    expired = [
+        sid
+        for sid, item in REMOTE_PHOTOS.items()
+        if now - item["updated_at"] > PHOTO_TTL_SECONDS
+    ]
+    for sid in expired:
+        del REMOTE_PHOTOS[sid]
+
+
+@app.route("/api/remote-photo", methods=["POST"])
+def upload_remote_photo():
+    payload = request.get_json(silent=True) or {}
+    session_id = (
+        request.args.get("sessionId")
+        or request.form.get("sessionId")
+        or payload.get("sessionId")
+        or "garden-01"
+    ).strip()
+
+    data_url = None
+
+    if "file" in request.files and request.files["file"].filename:
+        f = request.files["file"]
+        raw_bytes = f.read()
+        if not raw_bytes:
+            return jsonify({"ok": False, "error": "File anh rong"}), 400
+        mime_type = f.mimetype or "image/jpeg"
+        encoded = base64.b64encode(raw_bytes).decode("utf-8")
+        data_url = f"data:{mime_type};base64,{encoded}"
+    else:
+        raw_img = (payload.get("image") or request.form.get("image") or "").strip()
+        if not raw_img:
+            return jsonify({"ok": False, "error": "Thieu du lieu anh"}), 400
+        if raw_img.startswith("data:image/"):
+            data_url = raw_img
+        else:
+            data_url = f"data:image/jpeg;base64,{raw_img}"
+
+    with REMOTE_LOCK:
+        _cleanup_expired_photos()
+        REMOTE_PHOTOS[session_id] = {
+            "image": data_url,
+            "updated_at": time.time(),
+            "consumed": False,
+        }
+
+    return jsonify({"ok": True, "sessionId": session_id})
+
+
+@app.route("/api/remote-photo", methods=["GET"])
+def get_remote_photo():
+    session_id = (request.args.get("sessionId") or "garden-01").strip()
+    consume = (request.args.get("consume") or "true").lower() != "false"
+
+    with REMOTE_LOCK:
+        _cleanup_expired_photos()
+        item = REMOTE_PHOTOS.get(session_id)
+        if not item or item.get("consumed"):
+            return jsonify({"ok": True, "hasPhoto": False, "image": None})
+
+        image_data = item["image"]
+        if consume:
+            item["consumed"] = True
+
+        return jsonify({
+            "ok": True,
+            "hasPhoto": True,
+            "image": image_data,
+            "updatedAt": item["updated_at"],
+        })
+
+
+# ==========================================
 # 8. RUN SERVER
 # ==========================================
 
 if __name__ == "__main__":
 
     app.run(
-        host="127.0.0.1",
+        host="0.0.0.0",
         port=5000,
         debug=True,
         use_reloader=False

@@ -1,4 +1,3 @@
-
 /* ==========================================
    TOMATO SMARTCARE
    ENGINEERING DASHBOARD DESIGN SYSTEM
@@ -29,18 +28,30 @@
   --ui-shadow: 0 2px 10px rgba(36, 54, 70, 0.035);
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
 /* MAIN APP */
 
 .app-shell {
+  min-height: 100vh;
   color: var(--ui-text);
+  overflow-x: hidden;
 }
 
 .app-shell .app-workspace {
+  min-height: 100vh;
   background: var(--ui-bg);
+  overflow-x: hidden;
 }
 
 .app-shell .page-content {
   background: var(--ui-bg);
+  overflow-x: hidden;
 }
 
 .app-shell :is(button, input, select) {
@@ -75,36 +86,54 @@
   display: none !important;
 }
 
-/* DESKTOP LAYOUT */
+/* LAYOUT: CHO PHÉP CUỘN DỌC TỰ NHIÊN KHI NỘI DUNG DÀI */
+
+.app-shell:has(.garden-alerts-page),
+.app-shell:has(.garden-alerts-page) .app-workspace,
+.app-shell:has(.garden-alerts-page) .page-content,
+.garden-alerts-page {
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
+  overflow-y: visible !important;
+  overflow-x: hidden;
+}
 
 @media (min-width: 900px) {
   .app-shell:has(.leaf-clinic),
-  .app-shell:has(.garden-alerts-page),
   .app-shell:has(.history-page),
   .app-shell:has(.smart-settings) {
-    height: 100dvh;
-    overflow: hidden;
+    min-height: 100dvh;
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .app-shell:has(.leaf-clinic) .app-workspace,
-  .app-shell:has(.garden-alerts-page) .app-workspace,
   .app-shell:has(.history-page) .app-workspace,
   .app-shell:has(.smart-settings) .app-workspace {
-    height: 100dvh;
-    min-height: 0;
+    min-height: 100dvh;
+    height: auto;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .app-shell:has(.leaf-clinic) .page-content,
-  .app-shell:has(.garden-alerts-page) .page-content,
   .app-shell:has(.history-page) .page-content,
   .app-shell:has(.smart-settings) .page-content {
     flex: 1 1 auto;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
     padding: 14px 20px;
+  }
+
+  .app-shell:has(.garden-alerts-page) .page-content {
+    padding: 14px 20px 28px;
+  }
+
+  .app-shell:has(.app-sidebar.sidebar-collapsed) {
+    grid-template-columns: 78px 1fr !important;
   }
 }
 

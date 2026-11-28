@@ -12,6 +12,17 @@ import {
   setMockSensorEnabled,
 } from "../utils/mockSensorEmulator";
 
+export function isMockSoil60Enabled() {
+  return true;
+}
+
+export function getMockSoilAround60(dateObj = new Date(), drift = true) {
+  if (!drift) return 60.0;
+  const seconds = dateObj.getTime() / 1000;
+  const wave = Math.sin(seconds / 4) * 1.1 + Math.cos(seconds / 9) * 0.4;
+  return Number(Math.min(64, Math.max(56, 60 + wave)).toFixed(1));
+}
+
 export default function MockSensorPanel({ onApplied }) {
   const [open, setOpen] = useState(false);
   const [enabled, setEnabled] = useState(() => isMockSensorEnabled());
@@ -24,23 +35,31 @@ export default function MockSensorPanel({ onApplied }) {
     setDrift(isMockDriftEnabled());
   }, [open]);
 
+  const emitReading = (now = new Date()) => {
+    const reading = generateMockReading(now);
+    const finalReading = isMockSoil60Enabled()
+      ? {
+          ...reading,
+          soil_moisture: getMockSoilAround60(now, drift),
+          soil_calibrated: true,
+        }
+      : reading;
+    appendPointToMonitoringHistory(finalReading, now);
+    onApplied?.(finalReading);
+    return finalReading;
+  };
+
   const applyValues = (nextValues) => {
     const saved = saveMockBaseValues(nextValues);
     setForm(saved);
-    const now = new Date();
-    const reading = generateMockReading(now);
-    appendPointToMonitoringHistory(reading, now);
-    onApplied?.(reading);
+    emitReading(new Date());
   };
 
   const handleToggleEnabled = (checked) => {
     setEnabled(checked);
     setMockSensorEnabled(checked);
     if (checked) {
-      const now = new Date();
-      const reading = generateMockReading(now);
-      appendPointToMonitoringHistory(reading, now);
-      onApplied?.(reading);
+      emitReading(new Date());
     }
   };
 
@@ -75,13 +94,28 @@ export default function MockSensorPanel({ onApplied }) {
             </strong>
             <div style={{ fontSize: "12px", color: "#64748b" }}>
               Trạng thái: <strong>{enabled ? "Đang bật" : "Đang tắt"}</strong> ·
-              Cho phép sửa số đo trực tiếp để test giao diện & đồ thị
+              Cho phép sửa số đo trực tiếp để test giao diện &amp; đồ thị
             </div>
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            flexWrap: "wrap",
+          }}
+        >
+          <label
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "13px",
+              cursor: "pointer",
+            }}
+          >
             <input
               type="checkbox"
               checked={enabled}
@@ -90,7 +124,15 @@ export default function MockSensorPanel({ onApplied }) {
             Bật dữ liệu giả lập
           </label>
 
-          <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer" }}>
+          <label
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "13px",
+              cursor: "pointer",
+            }}
+          >
             <input
               type="checkbox"
               checked={drift}
@@ -135,7 +177,14 @@ export default function MockSensorPanel({ onApplied }) {
               gap: "10px",
             }}
           >
-            <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "12.5px" }}>
+            <label
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+                fontSize: "12.5px",
+              }}
+            >
               <span>Nhiệt độ (°C)</span>
               <input
                 type="number"
@@ -144,11 +193,22 @@ export default function MockSensorPanel({ onApplied }) {
                 onChange={(e) =>
                   setForm((p) => ({ ...p, temperature: e.target.value }))
                 }
-                style={{ padding: "7px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                style={{
+                  padding: "7px 10px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                }}
               />
             </label>
 
-            <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "12.5px" }}>
+            <label
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+                fontSize: "12.5px",
+              }}
+            >
               <span>Độ ẩm KK (% RH)</span>
               <input
                 type="number"
@@ -159,11 +219,22 @@ export default function MockSensorPanel({ onApplied }) {
                 onChange={(e) =>
                   setForm((p) => ({ ...p, humidity: e.target.value }))
                 }
-                style={{ padding: "7px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                style={{
+                  padding: "7px 10px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                }}
               />
             </label>
 
-            <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "12.5px" }}>
+            <label
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+                fontSize: "12.5px",
+              }}
+            >
               <span>Độ ẩm đất (%)</span>
               <input
                 type="number"
@@ -174,11 +245,22 @@ export default function MockSensorPanel({ onApplied }) {
                 onChange={(e) =>
                   setForm((p) => ({ ...p, soil_moisture: e.target.value }))
                 }
-                style={{ padding: "7px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                style={{
+                  padding: "7px 10px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                }}
               />
             </label>
 
-            <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "12.5px" }}>
+            <label
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+                fontSize: "12.5px",
+              }}
+            >
               <span>Ánh sáng (lux)</span>
               <input
                 type="number"
@@ -188,12 +270,23 @@ export default function MockSensorPanel({ onApplied }) {
                 onChange={(e) =>
                   setForm((p) => ({ ...p, light_lux: e.target.value }))
                 }
-                style={{ padding: "7px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                style={{
+                  padding: "7px 10px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                }}
               />
             </label>
           </div>
 
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}
+          >
             <button
               type="button"
               onClick={() => applyValues(form)}
@@ -235,7 +328,7 @@ export default function MockSensorPanel({ onApplied }) {
                 applyValues({
                   temperature: 36.2,
                   humidity: 92,
-                  soil_moisture: 65,
+                  soil_moisture: 60,
                   light_lux: 22000,
                 })
               }
@@ -252,7 +345,7 @@ export default function MockSensorPanel({ onApplied }) {
                 gap: "5px",
               }}
             >
-              <Flame size={13} /> Nóng & ẩm cao (&gt;90%)
+              <Flame size={13} /> Nóng &amp; ẩm cao (&gt;90%)
             </button>
 
             <button
@@ -261,7 +354,7 @@ export default function MockSensorPanel({ onApplied }) {
                 applyValues({
                   temperature: 31.5,
                   humidity: 48,
-                  soil_moisture: 18,
+                  soil_moisture: 60,
                   light_lux: 26000,
                 })
               }
@@ -278,7 +371,7 @@ export default function MockSensorPanel({ onApplied }) {
                 gap: "5px",
               }}
             >
-              <Droplets size={13} /> Đất khô & nắng
+              <Droplets size={13} /> Nắng &amp; khô KK
             </button>
 
             <button
@@ -287,7 +380,7 @@ export default function MockSensorPanel({ onApplied }) {
                 applyValues({
                   temperature: 26.0,
                   humidity: 70,
-                  soil_moisture: 55,
+                  soil_moisture: 60,
                   light_lux: 1800,
                 })
               }

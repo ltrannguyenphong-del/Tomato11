@@ -5,10 +5,14 @@ import "./App.css";
 import Diagnosis from "./pages/Diagnosis";
 import Alerts from "./pages/Alerts";
 import History from "./pages/History";
+import MobileSnap from "./pages/MobileSnap";
 import "./styles/engineering-theme.css";
 import UserLocationMap from "./components/UserLocationMap";
 import MetricChartModal from "./components/MetricChartModal";
-import MockSensorPanel from "./components/MockSensorPanel";
+import MockSensorPanel, {
+  getMockSoilAround60,
+  isMockSoil60Enabled,
+} from "./components/MockSensorPanel";
 import {
   appendPointToMonitoringHistory,
   generateMockReading,
@@ -32,7 +36,14 @@ import {
 } from "lucide-react";
 import Monitoring from "./pages/Monitoring";
 
-const API_BASE_URL = "http://127.0.0.1:5000";
+function resolveApiBaseUrl() {
+  if (typeof window !== "undefined" && window.location?.hostname) {
+    return `http://${window.location.hostname}:5000`;
+  }
+  return "http://127.0.0.1:5000";
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 const POLL_INTERVAL_MS = 3000;
 const DIAGNOSIS_STORAGE_KEY = "tomato_smartcare_diagnosis_state_v1";
 
@@ -111,7 +122,6 @@ const pageNames = {
   diagnosis: "Chẩn đoán AI",
   alerts: "Cảnh báo",
   history: "Lịch sử",
-  settings: "Cài đặt",
 };
 
 const defaultSensorCards = [
@@ -156,6 +166,17 @@ const defaultSensorCards = [
     emoji: "☀️",
   },
 ];
+
+export function withSoilAround60(sensorData, dateObj = new Date()) {
+  if (!sensorData || !isMockSoil60Enabled()) {
+    return sensorData;
+  }
+  return {
+    ...sensorData,
+    soil_moisture: getMockSoilAround60(dateObj, true),
+    soil_calibrated: true,
+  };
+}
 
 function parseConfidenceNumber(val) {
   if (typeof val === "number" && Number.isFinite(val)) return val;
@@ -817,7 +838,6 @@ function OverviewPage({
     >
       <MockSensorPanel onApplied={onAppliedMock} />
 
-      {/* Hàng 1: 4 thẻ thông số môi trường */}
       <section className="cute-section">
         <div className="cute-sensor-grid">
           {cards.map((item) => (
@@ -830,7 +850,6 @@ function OverviewPage({
         </div>
       </section>
 
-      {/* Hàng 2: Chia đôi 50/50 */}
       <section
         className="cute-bottom-grid"
         style={{
@@ -840,7 +859,6 @@ function OverviewPage({
           alignItems: "stretch",
         }}
       >
-        {/* CỘT TRÁI (50%): Bản đồ + Trạng thái hệ thống */}
         <div
           style={{
             display: "flex",
@@ -903,7 +921,6 @@ function OverviewPage({
           </div>
         </div>
 
-        {/* CỘT PHẢI (50%): Khối Đánh giá tình trạng vườn (gộp môi trường + AI) + Khuyến nghị ưu tiên */}
         <div
           style={{
             display: "flex",
@@ -959,7 +976,6 @@ function OverviewPage({
               {decision.overallSummary}
             </p>
 
-            {/* Môi trường cảm biến */}
             <div
               style={{
                 paddingTop: "12px",
@@ -1077,7 +1093,6 @@ function OverviewPage({
               )}
             </div>
 
-            {/* Tình trạng lá theo AI */}
             <div
               style={{
                 paddingTop: "12px",
@@ -1173,7 +1188,6 @@ function OverviewPage({
             </div>
           </div>
 
-          {/* Khuyến nghị ưu tiên */}
           <div
             className="cute-panel recommendation-panel"
             style={{
@@ -1274,6 +1288,10 @@ function PlaceholderPage({ title }) {
 }
 
 function App() {
+  const isMobileSnapRoute =
+    typeof window !== "undefined" &&
+    window.location.pathname === "/mobile-snap";
+
   const [activePage, setActivePage] = useState("overview");
   const [liveSensor, setLiveSensor] = useState(null);
   const [sensorConnected, setSensorConnected] = useState(false);
@@ -1303,11 +1321,12 @@ function App() {
   }, []);
 
   const fetchSensors = useCallback(async () => {
+    if (isMobileSnapRoute) return;
     const nowObj = new Date();
 
     if (isMockSensorEnabled()) {
       seedInitialMockHistory(12, 10, nowObj);
-      const mockData = generateMockReading(nowObj);
+      const mockData = withSoilAround60(generateMockReading(nowObj), nowObj);
       setLiveSensor(mockData);
       setSensorConnected(true);
       appendPointToMonitoringHistory(mockData, nowObj);
@@ -1334,29 +1353,31 @@ function App() {
           Number(data.light_lux) !== 0);
 
       if (hasRealData) {
-        setLiveSensor(data);
+        const mergedRealData = withSoilAround60(data, nowObj);
+        setLiveSensor(mergedRealData);
         setSensorConnected(true);
-        appendPointToMonitoringHistory(data, nowObj);
+        appendPointToMonitoringHistory(mergedRealData, nowObj);
         return;
       }
 
       // Chưa có dữ liệu thật: dùng dữ liệu giả lập để không bị trắng trang
       seedInitialMockHistory(12, 10, nowObj);
-      const fallbackMock = generateMockReading(nowObj);
+      const fallbackMock = withSoilAround60(generateMockReading(nowObj), nowObj);
       setLiveSensor(fallbackMock);
       setSensorConnected(false);
       appendPointToMonitoringHistory(fallbackMock, nowObj);
     } catch {
       // Lỗi kết nối / backend chưa chạy: dùng dữ liệu giả lập để không bị trắng trang
       seedInitialMockHistory(12, 10, nowObj);
-      const fallbackMock = generateMockReading(nowObj);
+      const fallbackMock = withSoilAround60(generateMockReading(nowObj), nowObj);
       setLiveSensor(fallbackMock);
       setSensorConnected(false);
       appendPointToMonitoringHistory(fallbackMock, nowObj);
     }
-  }, []);
+  }, [isMobileSnapRoute]);
 
   useEffect(() => {
+    if (isMobileSnapRoute) return;
     fetchSensors();
     const timer = setInterval(fetchSensors, POLL_INTERVAL_MS);
 
@@ -1369,7 +1390,11 @@ function App() {
       clearInterval(timer);
       window.removeEventListener("tomato-mock-sensor-updated", onMockUpdated);
     };
-  }, [fetchSensors]);
+  }, [fetchSensors, isMobileSnapRoute]);
+
+  if (isMobileSnapRoute) {
+    return <MobileSnap />;
+  }
 
   return (
     <div className={`app-shell cute-theme page-${activePage}`}>
@@ -1388,8 +1413,15 @@ function App() {
               onNavigate={setActivePage}
               onSelectMetric={(metricKey) => setSelectedMetric(metricKey)}
               onAppliedMock={(reading) => {
-                setLiveSensor(reading);
-                setSensorConnected(isMockSensorEnabled());
+                const nowObj = new Date();
+                if (isMockSensorEnabled()) {
+                  setLiveSensor(withSoilAround60(reading, nowObj));
+                  setSensorConnected(true);
+                } else {
+                  setLiveSensor((prev) =>
+                    withSoilAround60(prev || reading, nowObj)
+                  );
+                }
               }}
             />
           ) : activePage === "monitoring" ? (

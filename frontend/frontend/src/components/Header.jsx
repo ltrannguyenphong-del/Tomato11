@@ -20,17 +20,14 @@ const pageTitles = {
     subtitle: "AI sẽ giúp bạn kiểm tra sức khỏe của lá cây.",
   },
   alerts: {
-    title: "Thông báo khu vườn 🔔",
+    title: "Cảnh báo khu vườn 🔔",
     subtitle: "Những điều cần chú ý để cây luôn khỏe mạnh.",
   },
   history: {
-    title: "Nhật ký khu vườn 📖",
+    title: "Nhật ký AI & Cảnh báo khu vườn 📖",
     subtitle: "Lưu giữ hành trình chăm sóc cây cà chua.",
   },
-  settings: {
-    title: "Cài đặt hệ thống ⚙️",
-    subtitle: "Tùy chỉnh Tomato SmartCare theo ý thích.",
-  },
+  
 };
 
 function Header({ activePage }) {
